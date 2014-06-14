@@ -1,0 +1,20 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+    <title>SVG optimisation</title>
+    <script type="text/javascript" src="scripts/jquery-1.11.1.min.js"></script>
+    <script type="text/javascript" src="scripts/getSVG.js"></script>
+    <script type="text/javascript" src="scripts/optimiseSVG.js"></script>
+</head>
+
+<body>
+    <h1>SVG optimiser</h1>
+    <h2>Upload</h2>
+    <p>Paste SVG code below. <button onclick="loadSVG('svg-input')">Upload</button></p>
+    <textarea id="input-svg" style="border:1px solid #888;width:800px;height:300px;"></textarea>
+    <div>
+        <button onclick="getExampleSVG('mad-scientist')">Load example</button>
+    </div>
+</body>
+</html>
