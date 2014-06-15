@@ -82,6 +82,27 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
     return usedAttributes;
 };
 
+// Return a list of strings in the form "style:value" for the styles that are to be used
+SVG_Element.prototype.getUsedStyles = function(removeDefaultStyles) {
+    if (!this.styles) { return []; }
+
+    var usedStyles = [];
+    var ignoreFill = (this.styles['fill'] === 'none' || this.styles['fill-opacity'] === '0');
+    var ignoreStroke = (this.styles['stroke'] === 'none' || this.styles['stroke-opacity'] === '0' || this.styles['stroke-width'] === '0');
+
+    for (var style in this.styles) {
+        if (ignoreFill && style.substr(0, 4) === 'fill') { continue; }
+        if (ignoreStroke && style.substr(0, 6) === 'stroke') { continue; }
+        if (removeDefaultStyles && this.styles[style] === defaultStyles[style]) { continue; }
+
+        usedStyles.push(style + ":" + this.styles[style]);
+    }
+    
+    if (ignoreFill) { usedStyles.push('fill:none'); }
+    
+    return usedStyles.sort();
+};
+
 // Return a string representing the SVG element 
 SVG_Element.prototype.toString = function(options, depth) {
     // Remove namespace information
@@ -107,11 +128,7 @@ SVG_Element.prototype.toString = function(options, depth) {
     }
 
     // Write styles
-    var styleString = "";
-    for (var style in this.styles) {
-        styleString += style + ':' + this.styles[style] + ';';
-    }
-
+    var styleString = this.getUsedStyles(options.removeDefaultStyles).join(';');
     if (styleString) {
         str += ' style="' + styleString + '"';
     }
@@ -132,6 +149,9 @@ SVG_Element.prototype.toString = function(options, depth) {
         }
         str += indent + "</" + this.tag + ">" + options.newLine;
     } else {
+        if (options.removeEmptyElements && usedAttributes.length === 0) {
+            return "";
+        }
         str += "/>" + options.newLine;
     }
 
@@ -146,7 +166,9 @@ var SVG_Object = function(jQuerySVG) {
     // Set default options
     this.options = {
         whitespace: 'remove',
-        removeIDs: false
+        removeIDs: false,
+        removeDefaultStyles: true,
+        removeEmptyElements: true
     };
 
     // Namespaces are attributes of the SVG element, prefaced with 'xmlns:'
