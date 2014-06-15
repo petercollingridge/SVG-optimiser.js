@@ -63,8 +63,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
     var usedAttributes = [];
     
     for (var attr in this.attributes) {
-        // Remove attributes whose namespace has been removed
-        // And links to namespace URIs
+        // Remove attributes whose namespace has been removed and links to namespace URIs
         if (attr.indexOf(':') !== -1) {
             var ns = attr.split(':');
             if (!options.namespaces[ns[0]] || (ns[0] === 'xmlns' && !options.namespaces[ns[1]])) {
@@ -72,6 +71,11 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
             }
         }
         
+        // TODO: only remove ids that are not referenced elsewhere
+        if (options.removeIDs && attr === 'id') {
+            continue;
+        }
+
         usedAttributes.push(attr);
     }
     
@@ -139,8 +143,10 @@ SVG_Element.prototype.toString = function(options, depth) {
 var SVG_Object = function(jQuerySVG) {
     this.elements = new SVG_Element(jQuerySVG, null);
 
+    // Set default options
     this.options = {
-        whitespace: 'remove'
+        whitespace: 'remove',
+        removeIDs: false
     };
 
     // Namespaces are attributes of the SVG element, prefaced with 'xmlns:'

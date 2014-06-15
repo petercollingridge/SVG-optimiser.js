@@ -62,6 +62,9 @@ function loadSVG(id) {
     // Output a nicely formatted file
     svgObj.options.whitespace = 'pretty';
 
+    // Remove ids
+    svgObj.options.removeIDs = true;
+
     $('#output-div').empty();
     $('#output-div').append($("<p>Original filesize: " + getFileSize(svgStr) + "</p>"));
     $('#output-div').append($("<p>New filesize: " + getFileSize(svgObj.toString()) + "</p>"));
