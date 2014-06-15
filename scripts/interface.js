@@ -37,6 +37,17 @@ function getExampleSVG(filename) {
     });
 }
 
+// Convert string into filesize
+var getFileSize = function(str) {
+    var size = str.length / 1000;
+    if (size > 1000) {
+        return (Math.round(size / 100) / 10) + " MB";
+    } else {
+        return (Math.round(size * 10) / 10) + " kB";
+    }
+};
+
+
 // Get SVG string from textarea with given id
 // Parse as XML and convert to jQuery object
 function loadSVG(id) {
@@ -48,5 +59,7 @@ function loadSVG(id) {
     var jQuerySVG = $(svgDoc).children()[0];
     var svgObj = new SVG_Object(jQuerySVG);
 
-    console.log(svgObj);
+    $('#output-div').append($("<p>Original filesize: " + getFileSize(svgStr) + "</p>"));
+    $('#output-div').append($("<p>New filesize: " + getFileSize(svgObj.toString()) + "</p>"));
+    $('#input-svg').val(svgObj);
 }
