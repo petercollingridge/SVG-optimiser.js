@@ -3,7 +3,7 @@
 // We can remove any style given a default value
 var defaultStyles = {
     "display": "inline",
-    "visibility": "visible",  // Should remove hidden elements or those with opacity 0
+    "visibility": "visible",
     "opacity": "1",
     "enable-background": "accumulate",
     "fill": "#000000",
@@ -38,3 +38,7 @@ var nonEssentialStyles = {
     "clip-rule" : true,
     "stroke-miterlimit" : true
 };
+
+// Attribute which determine the size or position of elements
+var positionAttributes = [
+];

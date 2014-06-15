@@ -65,8 +65,12 @@ function loadSVG(id) {
     // Remove ids
     svgObj.options.removeIDs = true;
 
+    var filesize1 = getFileSize(svgStr);
+    var filesize2 = getFileSize(svgObj.toString());
+    var compression = Math.round(1000 * svgObj.toString().length / svgStr.length) / 10;
+
     $('#output-div').empty();
-    $('#output-div').append($("<p>Original filesize: " + getFileSize(svgStr) + "</p>"));
-    $('#output-div').append($("<p>New filesize: " + getFileSize(svgObj.toString()) + "</p>"));
+    $('#output-div').append($("<p>Original filesize: " + filesize1 + "</p>"));
+    $('#output-div').append($("<p>New filesize: " + filesize2 + " (" + compression + "%)</p>"));
     $('#input-svg').val(svgObj);
 }
