@@ -24,6 +24,7 @@ var SVG_Element = function(element, parents, root) {
     this.attributes = {};
     this.styles = {};
     this.parents = parents;
+    this.text = "";
 
 	// Add attributes to hash
     // Style attributes have a separate hash
@@ -57,9 +58,50 @@ var SVG_Element = function(element, parents, root) {
     }
 };
 
+SVG_Element.prototype.toString = function() {
+	var str = '<' + this.tag;
+
+    // Write attributes
+    for (var attr in this.attributes) {
+        str += ' ' + attr + '="';
+        str += this.attributes[attr];
+        str += '"';
+    }
+
+    // Write styles
+    var styleString = "";
+    for (var style in this.styles) {
+        styleString += style + ':' + this.styles[style] + ';';
+    }
+
+    if (styleString) {
+    	str += ' style="' + styleString + '"';
+    }
+
+    // Write child information
+    var childString = "";
+    for (var i = 0; i < this.children.length; i++) {
+    	childString += this.children[i].toString();
+    }
+
+    if (this.text.length + childString.length > 0) {
+        str += ">\n";
+        str += this.text + childString;
+        str += '</' + this.tag + '>\n';
+    } else {
+    	str += "/>\n";
+    }
+
+    return str;
+};
+
 // A wrapper for SVG_Elements which store the options for optimisation
 // Build from a jQuery object representing the SVG
 var SVG_Object = function(jQuerySVG) {
 	this.elements = new SVG_Element(jQuerySVG, null, this);
     this.options = {};
+};
+
+SVG_Object.prototype.toString = function() {
+	return this.elements.toString();
 };
