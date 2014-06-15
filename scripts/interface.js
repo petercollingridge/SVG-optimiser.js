@@ -59,6 +59,9 @@ function loadSVG(id) {
     var jQuerySVG = $(svgDoc).children()[0];
     var svgObj = new SVG_Object(jQuerySVG);
 
+    svgObj.options.whitespace = 'pretty';
+
+    $('#output-div').empty();
     $('#output-div').append($("<p>Original filesize: " + getFileSize(svgStr) + "</p>"));
     $('#output-div').append($("<p>New filesize: " + getFileSize(svgObj.toString()) + "</p>"));
     $('#input-svg').val(svgObj);

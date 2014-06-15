@@ -19,7 +19,7 @@ var parseStyle = function(styleString) {
 // Node in an SVG document
 // Contains all the options for optimising how the SVG is written
 
-var SVG_Element = function(element, parents, root) {
+var SVG_Element = function(element, parents) {
 	this.tag = element.nodeName;
     this.attributes = {};
     this.styles = {};
@@ -53,13 +53,16 @@ var SVG_Element = function(element, parents, root) {
                 this.text = child.data;
             }
         } else {
-            this.children.push(new SVG_Element(child, this, root));
+            this.children.push(new SVG_Element(child, this));
         }
     }
 };
 
-SVG_Element.prototype.toString = function() {
-	var str = '<' + this.tag;
+SVG_Element.prototype.toString = function(options, depth) {
+	var depth = depth || 0;
+	var indent = (options.whitespace === 'remove') ? '' : new Array(depth + 1).join('  ');
+
+	var str = indent + '<' + this.tag;
 
     // Write attributes
     for (var attr in this.attributes) {
@@ -81,15 +84,20 @@ SVG_Element.prototype.toString = function() {
     // Write child information
     var childString = "";
     for (var i = 0; i < this.children.length; i++) {
-    	childString += this.children[i].toString();
+    	childString += this.children[i].toString(options, depth + 1);
     }
 
     if (this.text.length + childString.length > 0) {
-        str += ">\n";
-        str += this.text + childString;
-        str += '</' + this.tag + '>\n';
+        str += ">" + options.newLine;
+        if (this.text) {
+        	str += indent + "  " + this.text + options.newLine;
+        }
+        if (childString) {
+        	str += childString;
+        }
+        str += indent + "</" + this.tag + ">" + options.newLine;
     } else {
-    	str += "/>\n";
+    	str += "/>" + options.newLine;
     }
 
     return str;
@@ -98,10 +106,15 @@ SVG_Element.prototype.toString = function() {
 // A wrapper for SVG_Elements which store the options for optimisation
 // Build from a jQuery object representing the SVG
 var SVG_Object = function(jQuerySVG) {
-	this.elements = new SVG_Element(jQuerySVG, null, this);
-    this.options = {};
+	this.elements = new SVG_Element(jQuerySVG, null);
+
+    this.options = {
+    	whitespace: 'remove'
+    };
 };
 
 SVG_Object.prototype.toString = function() {
-	return this.elements.toString();
+	this.options.newLine = (this.options.whitespace === 'remove') ? "": "\n";
+
+	return this.elements.toString(this.options);
 };
