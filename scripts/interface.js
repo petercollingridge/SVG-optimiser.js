@@ -59,6 +59,7 @@ function loadSVG(id) {
     var jQuerySVG = $(svgDoc).children()[0];
     var svgObj = new SVG_Object(jQuerySVG);
 
+    // Output a nicely formatted file
     svgObj.options.whitespace = 'pretty';
 
     $('#output-div').empty();
