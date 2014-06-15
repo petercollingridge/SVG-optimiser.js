@@ -133,6 +133,16 @@ SVG_Element.prototype.toString = function(options, depth) {
         str += ' style="' + styleString + '"';
     }
 
+    // Don't write group if it has no attributes, but do write its children
+    // Assume g element has no text (which it shouldn't)
+    if (this.tag === 'g' && options.removeCleanGroups && usedAttributes.length === 0 && styleString === "") {
+        var childString = "";
+        for (var i = 0; i < this.children.length; i++) {
+            childString += this.children[i].toString(options, depth + 1);
+        }
+        return childString;
+    }
+
     // Write child information
     var childString = "";
     for (var i = 0; i < this.children.length; i++) {
@@ -168,7 +178,8 @@ var SVG_Object = function(jQuerySVG) {
         whitespace: 'remove',
         removeIDs: false,
         removeDefaultStyles: true,
-        removeEmptyElements: true
+        removeEmptyElements: true,
+        removeCleanGroups: true
     };
 
     // Namespaces are attributes of the SVG element, prefaced with 'xmlns:'
