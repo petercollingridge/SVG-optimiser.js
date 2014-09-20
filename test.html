@@ -11,14 +11,35 @@
 
 <body>
     <h1>SVG optimiser</h1>
-    <h2>Upload</h2>
-    <p>Paste SVG code below. <button onclick="loadSVG('svg-input')">Upload</button></p>
-    <textarea id="input-svg" style="border:1px solid #888;width:800px;height:200px;"></textarea>
-    <div>
-        <button onclick="getExampleSVG('mad-scientist')">Load example</button>
-    </div>
 
-    <h2>Output</h2>
-    <div id="output-div"></div>
+    <section id="upload-section">
+        <h2>Upload</h2>
+        <div id="upload-container">
+            <div>
+                <button onclick="loadSVG('svg-input')">Upload</button>
+                <button onclick="getExampleSVG('mad-scientist')">Load example</button>
+            </div>
+            <textarea id="input-svg" placeholder="Paste SVG code here, then click upload" style="border:1px solid #888;width:800px;height:200px;"></textarea>
+        </div>
+    </section>
+
+    <section id="optimise-section">
+        <h2>Optimise</h2>
+        <div id="optimise-container">
+            <div id="svg-before" style="display:inline-block;margin:5px;background:#eee">
+                <div class="svg-container"></div>
+                <div class="svg-data-container"></div>
+            </div>
+            <div id="svg-after" style="display:inline-block;margin:5px;background:#eee">
+                <div class="svg-container"></div>
+                <div class="svg-data-container"></div>
+            </div>
+        </div>
+    </section>
+
+    <section id="output-section">
+        <h2>Output</h2>
+        <div id="output-container" style="white-space:pre-wrap;font-family:Fixed,'Courier New',monospace;font-size:12px"></div>
+    </section>
 </body>
 </html>

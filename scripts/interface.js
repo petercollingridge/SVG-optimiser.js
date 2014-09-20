@@ -47,6 +47,15 @@ var getFileSize = function(str) {
     }
 };
 
+// Clear element with given selector and add contents
+function addContentsToDiv(contents, selector) {
+    var div = $(selector);
+
+    if (div.length === 1) {
+        div.empty();
+        div.append(contents);
+    }
+};
 
 // Get SVG string from textarea with given id
 // Parse as XML and convert to jQuery object
@@ -65,12 +74,33 @@ function loadSVG(id) {
     // Remove ids
     svgObj.options.removeIDs = true;
 
+
+    // Update interface
+    $('#upload-container').hide("fast");
+    $('#input-svg').val(svgObj);
+    $('#output-section').show();
+    $('#optimise-section').show();
+
+    // Add SVG images
+    addContentsToDiv(svgStr, '#svg-before .svg-container');
+    addContentsToDiv(svgObj.toString(), '#svg-after .svg-container');
+
+    // Add SVG information
     var filesize1 = getFileSize(svgStr);
     var filesize2 = getFileSize(svgObj.toString());
     var compression = Math.round(1000 * svgObj.toString().length / svgStr.length) / 10;
+    addContentsToDiv($("<p>Original filesize: " + filesize1 + "</p>"), '#svg-before .svg-data-container');
+    addContentsToDiv($("<p>New filesize: " + filesize2 + " (" + compression + "%)</p>"), '#svg-after .svg-data-container');
 
-    $('#output-div').empty();
-    $('#output-div').append($("<p>Original filesize: " + filesize1 + "</p>"));
-    $('#output-div').append($("<p>New filesize: " + filesize2 + " (" + compression + "%)</p>"));
-    $('#input-svg').val(svgObj);
-}
+    // Show code of updated SVG
+    $('#output-container').text(svgObj.toString());
+};
+
+$(document).ready(function() {
+    $('#upload-section > h2').click(function() {
+        $('#upload-container').toggle('fast');
+    });
+
+    $('#output-section').hide();
+    $('#optimise-section').hide();
+});
