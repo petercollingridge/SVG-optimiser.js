@@ -16,11 +16,11 @@ var SVG_Element = function(element, parents) {
             var attrName = attr.nodeName;
 
             if (attrName === 'style') {
-                this.styles = this.parseStyle(attr.nodeValue);
+                this.styles = this.parseStyle(attr.value);
             } else if (defaultStyles[attrName] !== undefined) {
-                this.styles[attrName] = attr.nodeValue;
+                this.styles[attrName] = attr.value;
             } else {
-                this.attributes[attrName] = attr.nodeValue;
+                this.attributes[attrName] = attr.value;
             }
         }
     }
