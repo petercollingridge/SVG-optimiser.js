@@ -163,10 +163,14 @@ SVG_Element.prototype.toString = function(options, depth) {
         var attr = usedAttributes[i];
         str += ' ' + attr + '="';
 
-        // Need to deal with path d attributes separately
-        var values = this.attributes[attr].split(/[\s,]+/);
-        values = $.map(values, options.attrDecimals);
-        str += values.join(" ") + '"';
+        // TODO: convert tags to lowercase so will work with 'viewbox'
+        if (attr === 'viewBox' || (this.tag === 'path' && attr === 'd')) {
+            var values = this.attributes[attr].split(/[\s,]+/);
+            values = $.map(values, options.attrDecimals);
+            str += values.join(" ") + '"';
+        } else {
+            str += options.attrDecimals(this.attributes[attr]) + '"';
+        }
     }
 
     // Write styles
@@ -227,10 +231,12 @@ var SVG_Object = function(jQuerySVG) {
     };
 
     this.options.nonEssentialStyles = nonEssentialStyles;
+    this.options.namespaces = this.findNamespaces();
+};
 
-    // Namespaces are attributes of the SVG element, prefaced with 'xmlns:'
-    // Create a hash mapping namespaces to false, except for the SVG namespace
-    this.findNamespaces = function() {
+// Namespaces are attributes of the SVG element, prefaced with 'xmlns:'
+// Create a hash mapping namespaces to false, except for the SVG namespace
+SVG_Object.prototype.findNamespaces = function() {
         var namespaces = {};
 
         for (attr in this.elements.attributes) {
@@ -242,8 +248,6 @@ var SVG_Object = function(jQuerySVG) {
 
         return namespaces;
     };
-    this.options.namespaces = this.findNamespaces();
-};
 
 SVG_Object.prototype.toString = function() {
     this.options.newLine = (this.options.whitespace === 'remove') ? "": "\n";
