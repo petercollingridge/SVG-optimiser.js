@@ -92,7 +92,6 @@ function loadSVG(id) {
 
     // Update interface
     $('#upload-container').hide("fast");
-    $('#input-svg').val(svgObj);
     $('#output-section').show();
     $('#optimise-section').show();
 

@@ -174,7 +174,7 @@ SVG_Element.prototype.toString = function(options, depth) {
         // TODO: convert tags to lowercase so will work with 'viewbox'
         // TODO: also apply decimal places to transforms
         // TODO: add polygons and polylines
-        if (attr === 'viewBox') {
+        if (attr === 'viewBox' || attr === 'points') {
             var values = this.attributes[attr].split(/[\s,]+/);
             values = $.map(values, options.attrDecimals);
             str += values.join(" ");
@@ -194,6 +194,7 @@ SVG_Element.prototype.toString = function(options, depth) {
         }
         str += '"';
     }
+
 
     // Write styles
     var usedStyles = this.getUsedStyles(options);
@@ -313,12 +314,16 @@ SVG_Object.prototype.toString = function() {
 SVG_Object.prototype.getDecimalPlaceFunction = function(decimalPlaces) {
     if (!isNaN(parseInt(decimalPlaces))) {
         var scale = Math.pow(10, decimalPlaces);
+        var reDigit = /^\s*([-+]?[\d\.]+)([eE][-+]?[\d\.]+)?\s*(%|em|ex|px|pt|pc|cm|mm|in)\s*$/;
 
         return function(str) {
-            if (isNaN(parseFloat(str))) {
+            var digit = reDigit.exec(str);
+            var n = parseFloat(digit ? digit[1] + (digit[2] || "") : str);
+
+            if (isNaN(n)) {
                 return str;
             } else {
-                return "" + Math.round(parseFloat(str) * scale) / scale;
+                return "" + (Math.round(n * scale) / scale) + (digit ? digit[3] : "");
             }
         };
     } else {
