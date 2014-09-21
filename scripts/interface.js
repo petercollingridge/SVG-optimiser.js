@@ -60,13 +60,13 @@ function addContentsToDiv(contents, selector) {
 // Get SVG string from textarea with given id
 // Parse as XML and convert to jQuery object
 function loadSVG(id) {
-    var svgStr = $('#input-svg').val()
-    var svgDoc = stringToXML(svgStr);
+    var svgStringOld = $('#input-svg').val()
+    var svgDoc = stringToXML(svgStringOld);
 
     if (!svgDoc) { return; }
 
-    var jQuerySVG = $(svgDoc).children()[0];
-    var svgObj = new SVG_Object(jQuerySVG);
+    var jQuerySVG = $(svgDoc).children();
+    var svgObj = new SVG_Object(jQuerySVG[0]);
 
     // Output a nicely formatted file
     svgObj.options.whitespace = 'pretty';
@@ -74,6 +74,21 @@ function loadSVG(id) {
     // Remove ids
     svgObj.options.removeIDs = true;
 
+    // Create the new SVG string
+    var svgStringNew = svgObj.toString();
+
+    // Add SVG images
+    addContentsToDiv(svgStringOld, '#svg-before .svg-container');
+    addContentsToDiv(svgStringNew, '#svg-after .svg-container');
+
+    // Add SVG information
+    var filesizeOld = getFileSize(svgStringOld);
+    var filesizeNew = getFileSize(svgStringNew);
+    var numElementslOld = jQuerySVG.find("*").length;
+
+    var compression = Math.round(1000 * svgStringNew.length / svgStringOld.length) / 10;
+    addContentsToDiv($("<p>Original filesize: " + filesizeOld + "</p>"), '#svg-before .svg-data-container');
+    addContentsToDiv($("<p>New filesize: " + filesizeNew + " (" + compression + "%)</p>"), '#svg-after .svg-data-container');
 
     // Update interface
     $('#upload-container').hide("fast");
@@ -81,19 +96,8 @@ function loadSVG(id) {
     $('#output-section').show();
     $('#optimise-section').show();
 
-    // Add SVG images
-    addContentsToDiv(svgStr, '#svg-before .svg-container');
-    addContentsToDiv(svgObj.toString(), '#svg-after .svg-container');
-
-    // Add SVG information
-    var filesize1 = getFileSize(svgStr);
-    var filesize2 = getFileSize(svgObj.toString());
-    var compression = Math.round(1000 * svgObj.toString().length / svgStr.length) / 10;
-    addContentsToDiv($("<p>Original filesize: " + filesize1 + "</p>"), '#svg-before .svg-data-container');
-    addContentsToDiv($("<p>New filesize: " + filesize2 + " (" + compression + "%)</p>"), '#svg-after .svg-data-container');
-
     // Show code of updated SVG
-    $('#output-container').text(svgObj.toString());
+    $('#output-container').text(svgStringNew);
 };
 
 $(document).ready(function() {
