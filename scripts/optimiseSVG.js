@@ -1,6 +1,5 @@
 // Node in an SVG document
 // Contains all the options for optimising how the SVG is written
-
 var SVG_Element = function(element, parents) {
     this.tag = element.nodeName;
     this.attributes = {};
@@ -41,6 +40,7 @@ var SVG_Element = function(element, parents) {
     }
 };
 
+// Not used
 // Given a string a function for rounding decimals,
 // return the string with all the digits rounded
 SVG_Element.prototype.setDecimalsInString = function(str, func) {
@@ -72,7 +72,7 @@ SVG_Element.prototype.setDecimalsInString = function(str, func) {
         s += nonDigit;
     }
     return s;
-}
+};
 
 // Return an array of attributes that have not been removed
 SVG_Element.prototype.getUsedAttributes = function(options) {
@@ -120,21 +120,31 @@ SVG_Element.prototype.getUsedStyles = function(options) {
     if (!this.styles) { return []; }
 
     var usedStyles = [];
+
+    // Ignore other fill or stroke attributes if value is none or it is transparent
+    // TODO: apply decimal place function first
     var ignoreFill = (this.styles['fill'] === 'none' || this.styles['fill-opacity'] === '0');
     var ignoreStroke = (this.styles['stroke'] === 'none' || this.styles['stroke-opacity'] === '0' || this.styles['stroke-width'] === '0');
 
-    if ((ignoreFill && ignoreStroke) || this.styles['visibility'] === 'hidden'|| this.styles['opacity'] === 0) {
-        // Don't show
+    if ((ignoreFill && ignoreStroke) || this.styles['visibility'] === 'hidden'|| this.styles['opacity'] === '0') {
+        // TODO: don't show this element
         // Seems this would only be likely for animations or some weird styling with groups
     }
 
     for (var style in this.styles) {
+        var value = options.styleDecimals(this.styles[style]);
         if (ignoreFill && style.substr(0, 4) === 'fill') { continue; }
         if (ignoreStroke && style.substr(0, 6) === 'stroke') { continue; }
-        if (options.removeDefaultStyles && this.styles[style] === defaultStyles[style]) { continue; }
+        if (options.removeDefaultStyles && value === defaultStyles[style]) { continue; }
         if (options.nonEssentialStyles[style]) { continue; }
 
-        usedStyles.push(style + ":" + this.styles[style]);
+        // Simplify colours, e.g. #ffffff -> #fff
+        var repeated = value.match(/^#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3$/i);
+        if (repeated) {
+            value = '#' + repeated[1]  + repeated[2] + repeated[3];
+        }
+
+        usedStyles.push(style + ":" + value);
     }
     
     if (ignoreFill) { usedStyles.push('fill:none'); }
@@ -142,7 +152,8 @@ SVG_Element.prototype.getUsedStyles = function(options) {
     return usedStyles.sort();
 };
 
-// Return a string representing the SVG element 
+// Return a string representing the SVG element
+// All the optimisation is done here, so none of the original information is lost
 SVG_Element.prototype.toString = function(options, depth) {
     // Remove namespace information
     if (this.tag.indexOf(':') !== -1) {
@@ -164,6 +175,7 @@ SVG_Element.prototype.toString = function(options, depth) {
         str += ' ' + attr + '="';
 
         // TODO: convert tags to lowercase so will work with 'viewbox'
+        // TODO: also apply decimal places to transforms
         if (attr === 'viewBox' || (this.tag === 'path' && attr === 'd')) {
             var values = this.attributes[attr].split(/[\s,]+/);
             values = $.map(values, options.attrDecimals);
@@ -174,15 +186,18 @@ SVG_Element.prototype.toString = function(options, depth) {
     }
 
     // Write styles
-    var styleString = this.getUsedStyles(options).join(';');
-    if (styleString) {
-        str += ' style="' + styleString + '"';
+    var usedStyles = this.getUsedStyles(options);
+    if (usedStyles.length > 1) {
+        str += ' style="' + usedStyles.join(';') + '"';
+    } else if (usedStyles.length === 1) {
+        var style = usedStyles[0].split(':');
+        str += ' ' + style[0] + '="' + style[1] + '"';
     }
 
     // Don't write group if it has no attributes, but do write its children
     // Assume g element has no text (which it shouldn't)
     // TODO: if g contains styles could add styles to children (only if using CSS)
-    if (this.tag === 'g' && options.removeCleanGroups && usedAttributes.length === 0 && styleString === "") {
+    if (this.tag === 'g' && options.removeCleanGroups && !usedAttributes && !usedStyles) {
         var childString = "";
         for (var i = 0; i < this.children.length; i++) {
             childString += this.children[i].toString(options, depth + 1);
@@ -228,6 +243,7 @@ var SVG_Object = function(jQuerySVG) {
         removeEmptyElements: true,
         removeCleanGroups: true,
         attributeDecimalPlaces: 1,
+        styleDecimalPlaces: 2,
     };
 
     this.options.nonEssentialStyles = nonEssentialStyles;
@@ -247,11 +263,12 @@ SVG_Object.prototype.findNamespaces = function() {
         }
 
         return namespaces;
-    };
+};
 
 SVG_Object.prototype.toString = function() {
     this.options.newLine = (this.options.whitespace === 'remove') ? "": "\n";
     this.options.attrDecimals = this.getDecimalPlaceFunction(this.options.attributeDecimalPlaces);
+    this.options.styleDecimals = this.getDecimalPlaceFunction(this.options.styleDecimalPlaces);
 
     return this.elements.toString(this.options);
 };

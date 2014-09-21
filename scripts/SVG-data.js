@@ -36,9 +36,11 @@ var nonEssentialStyles = {
     "overflow" : true,
     "fill-rule" : true,
     "clip-rule" : true,
+    "nodetypes" : true,
     "stroke-miterlimit" : true
 };
 
 // Attribute which determine the size or position of elements
 var positionAttributes = [
+
 ];
