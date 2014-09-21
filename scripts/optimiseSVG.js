@@ -15,8 +15,8 @@ var SVG_Element = function(element, parents) {
             var attrName = attr.nodeName;
 
             if (attrName === 'style') {
-                this.styles = this.parseStyle(attr.value);
-            } else if (defaultStyles[attrName] !== undefined) {
+                $.extend(this.styles, this.parseStyle(attr.value));
+            } else if (defaultStyles[attrName] !== undefined || nonEssentialStyles[attrName] !== undefined) {
                 this.styles[attrName] = attr.value;
             } else {
                 this.attributes[attrName] = attr.value;
@@ -122,27 +122,27 @@ SVG_Element.prototype.getUsedStyles = function(options) {
     var usedStyles = [];
 
     // Ignore other fill or stroke attributes if value is none or it is transparent
-    // TODO: apply decimal place function first
-    var ignoreFill = (this.styles['fill'] === 'none' || this.styles['fill-opacity'] === '0');
-    var ignoreStroke = (this.styles['stroke'] === 'none' || this.styles['stroke-opacity'] === '0' || this.styles['stroke-width'] === '0');
+    var ignoreFill = (this.styles['fill'] === 'none' || options.styleDecimals(this.styles['fill-opacity']) == 0);
+    var ignoreStroke = (this.styles['stroke'] === 'none' || options.styleDecimals(this.styles['stroke-opacity']) == 0 || options.styleDecimals(this.styles['stroke-width']) == 0);
 
-    if ((ignoreFill && ignoreStroke) || this.styles['visibility'] === 'hidden'|| this.styles['opacity'] === '0') {
+    if ((ignoreFill && ignoreStroke) || this.styles['visibility'] === 'hidden'|| options.styleDecimals(this.styles['opacity']) == 0) {
         // TODO: don't show this element
         // Seems this would only be likely for animations or some weird styling with groups
     }
 
     for (var style in this.styles) {
         var value = options.styleDecimals(this.styles[style]);
-        if (ignoreFill && style.substr(0, 4) === 'fill') { continue; }
-        if (ignoreStroke && style.substr(0, 6) === 'stroke') { continue; }
-        if (options.removeDefaultStyles && value === defaultStyles[style]) { continue; }
-        if (options.nonEssentialStyles[style]) { continue; }
 
         // Simplify colours, e.g. #ffffff -> #fff
         var repeated = value.match(/^#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3$/i);
         if (repeated) {
             value = '#' + repeated[1]  + repeated[2] + repeated[3];
         }
+
+        if (ignoreFill && style.substr(0, 4) === 'fill') { continue; }
+        if (ignoreStroke && style.substr(0, 6) === 'stroke') { continue; }
+        if (options.removeDefaultStyles && value === defaultStyles[style]) { continue; }
+        if (options.removeNonEssentialStyles && options.nonEssentialStyles[style]) { continue; }
 
         usedStyles.push(style + ":" + value);
     }
@@ -176,12 +176,17 @@ SVG_Element.prototype.toString = function(options, depth) {
 
         // TODO: convert tags to lowercase so will work with 'viewbox'
         // TODO: also apply decimal places to transforms
+        // TODO: add polygons and polylines
         if (attr === 'viewBox' || (this.tag === 'path' && attr === 'd')) {
             var values = this.attributes[attr].split(/[\s,]+/);
             values = $.map(values, options.attrDecimals);
             str += values.join(" ") + '"';
         } else {
-            str += options.attrDecimals(this.attributes[attr]) + '"';
+            if (attr !== 'version') {
+                str += options.attrDecimals(this.attributes[attr]) + '"';
+            } else {
+                str += this.attributes[attr] + '"';
+            }
         }
     }
 
@@ -240,6 +245,7 @@ var SVG_Object = function(jQuerySVG) {
         whitespace: 'remove',
         removeIDs: false,
         removeDefaultStyles: true,
+        removeNonEssentialStyles: true,
         removeEmptyElements: true,
         removeCleanGroups: true,
         attributeDecimalPlaces: 1,

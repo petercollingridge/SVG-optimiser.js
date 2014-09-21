@@ -69,7 +69,7 @@ function loadSVG(id) {
     var svgObj = new SVG_Object(jQuerySVG[0]);
 
     // Output a nicely formatted file
-    svgObj.options.whitespace = 'pretty';
+    //svgObj.options.whitespace = 'pretty';
 
     // Remove ids
     svgObj.options.removeIDs = true;

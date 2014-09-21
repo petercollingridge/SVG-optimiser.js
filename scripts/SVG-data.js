@@ -2,11 +2,15 @@
 
 // We can remove any style given a default value
 var defaultStyles = {
+    "clip": "auto",
+    "clip-path": "none",
+    "clip-rule": "nonzero",
+    "cursor": "auto",
     "display": "inline",
     "visibility": "visible",
     "opacity": "1",
     "enable-background": "accumulate",
-    "fill": "#000000",
+    "fill": "#000",
     "fill-opacity": "1",
     "fill-rule": "nonzero",
     "marker": "none",
@@ -26,7 +30,8 @@ var defaultStyles = {
     "font-style": "normal",
     "font-weight": "normal",
     "font-stretch": "normal",
-    "font-variant": "normal"
+    "font-variant": "normal",
+    "pointer-events": "visiblePainted"
 };
 
 // Styles that can probably be removed
