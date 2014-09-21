@@ -20,6 +20,11 @@ var SVG_Element = function(element, parents) {
                 this.styles[attrName] = attr.value;
             } else {
                 this.attributes[attrName] = attr.value;
+
+                // Parse path coordinates
+                if (this.tag === "path" && attrName === 'd') {
+                    this.pathCommands = this.parsePath(attr.value);
+                }
             }
         }
     }
@@ -38,40 +43,6 @@ var SVG_Element = function(element, parents) {
             this.children.push(new SVG_Element(child, this));
         }
     }
-};
-
-// Not used
-// Given a string a function for rounding decimals,
-// return the string with all the digits rounded
-SVG_Element.prototype.setDecimalsInString = function(str, func) {
-    if (!str) { return ""; }
-    
-    // Split string into array of digits and non-digits
-    var reDigits = /\s*([-+]?[\d\.]+)([eE][-+]?[\d\.]+)?\s*/g;
-    var nonDigits = [];
-    var digits = [];
-    var n2, n1 = 0;
-
-    while (digit = reDigits.exec(str)){
-        n2 = digit.index;
-        nonDigits.push(str.slice(n1, n2));
-        digits.push(parseFloat(digit));
-        n1 = n2 + digit[0].length;
-    }
-    nonDigits.push(str.slice(n1));
-
-    var s = nonDigits[0];
-    for (var i = 0; i < digits.length; i++) {
-        s += func(digits[i]);
-        var nonDigit = nonDigits[i + 1];
-
-        // Add a separating space unless this is the last value
-        if (i !== digits.length - 1 && nonDigit === "") {
-            nonDigit = " ";
-        }
-        s += nonDigit;
-    }
-    return s;
 };
 
 // Return an array of attributes that have not been removed
@@ -97,6 +68,32 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
     
     return usedAttributes;
 };
+
+// Split a string from a path "d" attribute into a list of letters and values
+SVG_Element.prototype.parsePath = function(dAttr) {
+    var reCommands = /([ACHLMQSTVZ])([-\+\d\.\s,e]*)/gi
+    var reDigits = /([-+]?[\d\.]+)([eE][-+]?[\d\.]+)?/g;
+    var letters = [];
+    var values = [];
+
+    // Converts a string of digits to an array of floats
+    var getDigits = function(digitString) {
+        var digits = [];
+        if (digitString) {
+            while (digit = reDigits.exec(digitString)) {
+                digits.push(parseFloat(digit));
+            }
+        }
+        return digits;
+    };
+
+    while (commands = reCommands.exec(dAttr)) {
+        letters.push(commands[1]);
+        values.push(getDigits(commands[2]));
+    }
+
+    return { letters: letters, values: values };
+}
 
 // Split a string from a style attribute into a hash of styles
 // e.g. style="fill:#269276;opacity:1" => {fill: '#269276', opacity: '1'}
@@ -177,17 +174,25 @@ SVG_Element.prototype.toString = function(options, depth) {
         // TODO: convert tags to lowercase so will work with 'viewbox'
         // TODO: also apply decimal places to transforms
         // TODO: add polygons and polylines
-        if (attr === 'viewBox' || (this.tag === 'path' && attr === 'd')) {
+        if (attr === 'viewBox') {
             var values = this.attributes[attr].split(/[\s,]+/);
             values = $.map(values, options.attrDecimals);
-            str += values.join(" ") + '"';
+            str += values.join(" ");
+        } else if (this.tag === 'path' && attr === 'd') {
+            var coordString = this.getPathString(options);
+            if (coordString) {
+                str += coordString;
+            } else {
+                return "";
+            }
         } else {
             if (attr !== 'version') {
-                str += options.attrDecimals(this.attributes[attr]) + '"';
+                str += options.attrDecimals(this.attributes[attr]);
             } else {
-                str += this.attributes[attr] + '"';
+                str += this.attributes[attr];
             }
         }
+        str += '"';
     }
 
     // Write styles
@@ -234,6 +239,31 @@ SVG_Element.prototype.toString = function(options, depth) {
 
     return str;
 };
+
+// Create a string for the 'd' attribute of a path
+SVG_Element.prototype.getPathString = function(options) {
+        var coordString = "";
+
+        if (this.pathCommands) {
+            var letters = this.pathCommands.letters;
+            var values = this.pathCommands.values;
+
+            var currentLetter;
+            for (var i = 0; i < letters.length; i++) {
+                coordString += (letters[i] === currentLetter) ? " " : letters[i];
+                currentLetter = letters[i];
+                
+                if (values[i]) {
+                    for (var j = 0; j < values[i].length; j++) {
+                        if (j > 0  && values[i][j] >= 0) coordString += " ";
+                        coordString += options.attrDecimals(values[i][j]);
+                    }
+                }
+            }
+        }
+
+        return coordString;
+    };
 
 // A wrapper for SVG_Elements which store the options for optimisation
 // Build from a jQuery object representing the SVG
