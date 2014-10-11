@@ -17,7 +17,10 @@
         <div id="upload-container">
             <div>
                 <button onclick="loadSVG('svg-input')">Upload</button>
-                <button onclick="getExampleSVG('mad-scientist')">Load example</button>
+                <button onclick="getExampleSVG('mad-scientist')">Example: Scientist</button>
+                <button onclick="getExampleSVG('FClef')">Example: Clef</button>
+                <button onclick="getExampleSVG('eleven_below')">Example: Room</button>
+                <button onclick="getExampleSVG('Example')">Example: Another example</button>
             </div>
             <textarea id="input-svg" placeholder="Paste SVG code here, then click upload" style="border:1px solid #888;width:800px;height:200px;"></textarea>
         </div>
@@ -26,11 +29,11 @@
     <section id="optimise-section">
         <h2>Optimise</h2>
         <div id="optimise-container">
-            <div id="svg-before" style="display:inline-block;margin:5px;background:#eee">
+            <div id="svg-before" style="display:inline-block;margin:5px;background:#e8e8e8;padding:5px">
                 <div class="svg-container"></div>
                 <div class="svg-data-container"></div>
             </div>
-            <div id="svg-after" style="display:inline-block;margin:5px;background:#eee">
+            <div id="svg-after" style="display:inline-block;margin:5px;background:#e8e8e8;padding:5px">
                 <div class="svg-container"></div>
                 <div class="svg-data-container"></div>
             </div>
