@@ -17,6 +17,7 @@ var SVG_Element = function(element, parents) {
             if (attrName === 'style') {
                 $.extend(this.styles, this.parseStyle(attr.value));
             } else if (defaultStyles[attrName] !== undefined || nonEssentialStyles[attrName] !== undefined) {
+                // Style written as a separate attribute
                 this.styles[attrName] = attr.value;
             } else {
                 this.attributes[attrName] = attr.value;
@@ -24,6 +25,8 @@ var SVG_Element = function(element, parents) {
                 // Parse path coordinates
                 if (this.tag === "path" && attrName === 'd') {
                     this.pathCommands = this.parsePath(attr.value);
+                } else if (attrName === 'transform') {
+                    this.transformations = this.parseTransform(attr.value);
                 }
             }
         }
@@ -45,30 +48,6 @@ var SVG_Element = function(element, parents) {
     }
 };
 
-// Return an array of attributes that have not been removed
-SVG_Element.prototype.getUsedAttributes = function(options) {
-    var usedAttributes = [];
-    
-    for (var attr in this.attributes) {
-        // Remove attributes whose namespace has been removed and links to namespace URIs
-        if (attr.indexOf(':') !== -1) {
-            var ns = attr.split(':');
-            if (!options.namespaces[ns[0]] || (ns[0] === 'xmlns' && !options.namespaces[ns[1]])) {
-                continue;
-            }
-        }
-        
-        // TODO: only remove ids that are not referenced elsewhere
-        if (options.removeIDs && attr === 'id') {
-            continue;
-        }
-
-        usedAttributes.push(attr);
-    }
-    
-    return usedAttributes;
-};
-
 // Split a string from a path "d" attribute into a list of letters and values
 SVG_Element.prototype.parsePath = function(dAttr) {
     var reCommands = /([ACHLMQSTVZ])([-\+\d\.\s,e]*)/gi
@@ -78,7 +57,8 @@ SVG_Element.prototype.parsePath = function(dAttr) {
 
     // Converts a string of digits to an array of floats
     var getDigits = function(digitString) {
-        var digits = [];
+        var digit, digits = [];
+
         if (digitString) {
             while (digit = reDigits.exec(digitString)) {
                 digits.push(parseFloat(digit));
@@ -112,6 +92,52 @@ SVG_Element.prototype.parseStyle = function(styleString) {
     return styles;
 };
 
+SVG_Element.prototype.parseTransform = function(transformString) {
+    var reTransform = /([a-z]+)\s*\(([-\+\d\.\s,e]+)\)/gi;
+    var transform, transforms = [];
+
+    if (transformString) {
+        while (transform = reTransform.exec(transformString)) {
+            digits = transform[2].split(/\s*,\s*/);
+            transforms.push(transform[1], $.map(digits, parseFloat))
+        }
+    }
+
+    return transforms;
+
+};
+
+// Return an array of attributes that have not been removed
+SVG_Element.prototype.getUsedAttributes = function(options) {
+    var usedAttributes = [];
+    
+    for (var attr in this.attributes) {
+        // Remove attributes whose namespace has been removed and links to namespace URIs
+        if (attr.indexOf(':') !== -1) {
+            var ns = attr.split(':');
+            if (!options.namespaces[ns[0]] || (ns[0] === 'xmlns' && !options.namespaces[ns[1]])) {
+                continue;
+            }
+        }
+        
+        if (options.removeDefaultAttributes &&
+            positionAttributes.indexOf(attr) !== -1 &&
+            options.positionDecimals(this.attributes[attr]) == 0) {
+            continue;
+        }
+
+        // TODO: only remove ids that are not referenced elsewhere
+        if (options.removeIDs && attr === 'id') {
+            continue;
+        }
+
+        usedAttributes.push(attr);
+    }
+    
+    return usedAttributes;
+};
+
+
 // Return a list of strings in the form "style:value" for the styles that are to be used
 SVG_Element.prototype.getUsedStyles = function(options) {
     if (!this.styles) { return []; }
@@ -130,6 +156,12 @@ SVG_Element.prototype.getUsedStyles = function(options) {
     for (var style in this.styles) {
         var value = options.styleDecimals(this.styles[style]);
 
+        // If we're multiplying positons by powers of 10, certain styles also need multiplying
+        // TODO: will also have to change font sizes
+        if (options.attributeNumTruncate[1] === 'order of magnitude' && style === 'stroke-width') {
+            value = options.positionDecimals(this.styles[style]);
+        }
+
         // Simplify colours, e.g. #ffffff -> #fff
         var repeated = value.match(/^#([0-9a-f])\1([0-9a-f])\2([0-9a-f])\3$/i);
         if (repeated) {
@@ -138,7 +170,7 @@ SVG_Element.prototype.getUsedStyles = function(options) {
 
         if (ignoreFill && style.substr(0, 4) === 'fill') { continue; }
         if (ignoreStroke && style.substr(0, 6) === 'stroke') { continue; }
-        if (options.removeDefaultStyles && value === defaultStyles[style]) { continue; }
+        if (options.removeDefaultStyles && value == defaultStyles[style]) { continue; }
         if (options.removeNonEssentialStyles && options.nonEssentialStyles[style]) { continue; }
 
         usedStyles.push(style + ":" + value);
@@ -165,7 +197,7 @@ SVG_Element.prototype.toString = function(options, depth) {
 
     var str = indent + '<' + this.tag;
 
-    // Write attributes
+    // Write attributes with numbers truncated in the prefered way
     var usedAttributes = this.getUsedAttributes(options);
     for (var i = 0; i < usedAttributes.length; i++) {
         var attr = usedAttributes[i];
@@ -173,24 +205,21 @@ SVG_Element.prototype.toString = function(options, depth) {
 
         // TODO: convert tags to lowercase so will work with 'viewbox'
         // TODO: also apply decimal places to transforms
-        // TODO: add polygons and polylines
         if (attr === 'viewBox' || attr === 'points') {
             var values = this.attributes[attr].split(/[\s,]+/);
-            values = $.map(values, options.attrDecimals);
+            values = $.map(values, options.positionDecimals);
             str += values.join(" ");
         } else if (this.tag === 'path' && attr === 'd') {
             var coordString = this.getPathString(options);
-            if (coordString) {
-                str += coordString;
-            } else {
-                return "";
-            }
+            // Don't show a path with no coordinates
+            if (!coordString) { return ""; }
+            str += coordString;
+        } else if (this.tag === 'svg' && (attr === 'width' || attr === 'height')) {
+            str += options.svgSizeDecimals(this.attributes[attr]);
+        } else if (positionAttributes.indexOf(attr) !== -1 ) {
+            str += options.positionDecimals(this.attributes[attr]);
         } else {
-            if (attr !== 'version') {
-                str += options.attrDecimals(this.attributes[attr]);
-            } else {
-                str += this.attributes[attr];
-            }
+            str += this.attributes[attr];
         }
         str += '"';
     }
@@ -243,28 +272,32 @@ SVG_Element.prototype.toString = function(options, depth) {
 
 // Create a string for the 'd' attribute of a path
 SVG_Element.prototype.getPathString = function(options) {
-        var coordString = "";
+    var coordString = "";
 
-        if (this.pathCommands) {
-            var letters = this.pathCommands.letters;
-            var values = this.pathCommands.values;
+    if (this.pathCommands) {
+        var letters = this.pathCommands.letters;
+        var values = this.pathCommands.values;
 
-            var currentLetter;
-            for (var i = 0; i < letters.length; i++) {
-                coordString += (letters[i] === currentLetter) ? " " : letters[i];
-                currentLetter = letters[i];
-                
-                if (values[i]) {
-                    for (var j = 0; j < values[i].length; j++) {
-                        if (j > 0  && values[i][j] >= 0) coordString += " ";
-                        coordString += options.attrDecimals(values[i][j]);
-                    }
+        var currentLetter;
+        for (var i = 0; i < letters.length; i++) {
+            coordString += (letters[i] === currentLetter) ? " " : letters[i];
+            currentLetter = letters[i];
+            
+            if (values[i]) {
+                for (var j = 0; j < values[i].length; j++) {
+                    if (j > 0  && values[i][j] >= 0) coordString += " ";
+                    coordString += options.positionDecimals(values[i][j]);
                 }
             }
         }
+    }
 
-        return coordString;
-    };
+    return coordString;
+};
+
+SVG_Element.prototype.applyTransform = function() {
+
+};
 
 // A wrapper for SVG_Elements which store the options for optimisation
 // Build from a jQuery object representing the SVG
@@ -275,13 +308,18 @@ var SVG_Object = function(jQuerySVG) {
     this.options = {
         whitespace: 'remove',
         removeIDs: false,
+        removeDefaultAttributes: true,
         removeDefaultStyles: true,
         removeNonEssentialStyles: true,
         removeEmptyElements: true,
         removeCleanGroups: true,
-        attributeDecimalPlaces: 1,
-        styleDecimalPlaces: 2,
+        applyTransforms: true,
+        attributeNumTruncate: [1, 'decimal place'],
+        styleNumTruncate: [2, 'significant figure'],
+        svgSizeTruncate: [0, 'decimal place'],
     };
+
+    this.options.attributeNumTruncate = [1, 'order of magnitude'];
 
     this.options.nonEssentialStyles = nonEssentialStyles;
     this.options.namespaces = this.findNamespaces();
@@ -304,29 +342,54 @@ SVG_Object.prototype.findNamespaces = function() {
 
 SVG_Object.prototype.toString = function() {
     this.options.newLine = (this.options.whitespace === 'remove') ? "": "\n";
-    this.options.attrDecimals = this.getDecimalPlaceFunction(this.options.attributeDecimalPlaces);
-    this.options.styleDecimals = this.getDecimalPlaceFunction(this.options.styleDecimalPlaces);
+
+    this.options.positionDecimals = this.getDecimalOptimiserFunction(this.options.attributeNumTruncate);
+    this.options.styleDecimals = this.getDecimalOptimiserFunction(this.options.styleNumTruncate);
+    this.options.svgSizeDecimals = this.getDecimalOptimiserFunction(this.options.svgSizeTruncate);
 
     return this.elements.toString(this.options);
 };
 
-// Return a function that given a number returns a rounded version to n decimal places
-SVG_Object.prototype.getDecimalPlaceFunction = function(decimalPlaces) {
-    if (!isNaN(parseInt(decimalPlaces))) {
-        var scale = Math.pow(10, decimalPlaces);
+// Return a function that given a number optimises it.
+// type === 'decimal place': round to a number of decimal places
+// type === 'significant figure': round to a number of significant figures (needs work)
+// type === 'order of magnitude': multiply by a power of 10, then round
+SVG_Object.prototype.getDecimalOptimiserFunction = function(parameters) {
+    var level = parameters[0];
+    var type = parameters[1];
+
+    if (!isNaN(parseInt(level))) {
+        var scale = Math.pow(10, level);
         var reDigit = /^\s*([-+]?[\d\.]+)([eE][-+]?[\d\.]+)?\s*(%|em|ex|px|pt|pc|cm|mm|in)\s*$/;
 
+        var roundFunction;
+        if (type === 'decimal place') {
+            roundFunction = function(n) { return Math.round(n * scale) / scale; }
+        } else if (type === 'significant figure') {
+            roundFunction = function(n) {
+                if (n == 0) { return 0; }
+                var mag = Math.pow(10, level - Math.ceil(Math.log(n < 0 ? -n: n) / Math.LN10));
+                return Math.round(n * mag) / mag;
+            }
+        } else if (type === 'order of magnitude') {
+            roundFunction = function(n) { return Math.round(n * scale); }
+        } else {
+            roundFunction = function(n) { return n; }
+        }
+
         return function(str) {
+            // Parse digit string to digit, while keeping any final units
             var digit = reDigit.exec(str);
             var n = parseFloat(digit ? digit[1] + (digit[2] || "") : str);
 
             if (isNaN(n)) {
                 return str;
             } else {
-                return "" + (Math.round(n * scale) / scale) + (digit ? digit[3] : "");
+                return roundFunction(n) + (digit ? digit[3] : "");
             }
         };
     } else {
+        // This shouldn't happen, but just in case, return an identity function
         return function(str) { return str; };
     }
 };
