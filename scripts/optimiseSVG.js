@@ -123,27 +123,36 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
     for (var attr in this.attributes) {
         if (positionAttributes.indexOf(attr) !== -1) {
             transformedAttributes[attr] = parseFloat(this.attributes[attr]);
+        } else if (attr === 'd') {
+            this.pathCommands = this.parsePath(this.attributes[attr], options);
         }
     }
 
-    // If one attribute is a transformation then try to apply it
+    console.log(this.getPathString(options))
+
+    // If one attribute is a transformation then try to apply transformations in reverse order
     // If successful, remove the transformation
     if (options.applyTransforms && this.attributes.transform) {
         var transforms = this.parseTransform(this.attributes.transform);
 
-        for (var i = 0; i < transforms.length; i++) {
-            newAttributes = this.applyTransformation(transforms[i], transformedAttributes);
+        for (var i = transforms.length - 1; i >= 0; i--) {
+            var transform = transforms[i];
+            newAttributes = this.applyTransformation(transform[0], transform[1], transformedAttributes);
             if (newAttributes) {
                 transformedAttributes = newAttributes;
                 transformedAttributes.transform = "";
             } else {
+                console.log(this.getPathString(options))
                 // For now, if any transform fails, give up
                 // TODO: fix this
+                // TODO: truncate decimals and remove if identity transformation
                 transformedAttributes = {};
                 break;
             }
         }
     }
+
+    console.log(this.getPathString(options))
 
     for (var attr in this.attributes) {
         // Remove attributes whose namespace has been removed and links to namespace URIs
@@ -183,7 +192,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
         } else if (this.tag === 'svg' && (attr === 'width' || attr === 'height')) {
             value = options.svgSizeDecimals(value);
         } else if (this.tag === 'path' && attr === 'd') {
-            value = this.getPathString(value, options);
+            value = this.getPathString(options);
         } else if (positionAttributes.indexOf(attr) !== -1 ) {
             value = options.positionDecimals(value);
         }
@@ -271,8 +280,10 @@ SVG_Element.prototype.toString = function(options, depth) {
         }
     }
 
+    var numUsedAttributes = 0;
     for (var attr in usedAttributes) {
         str += ' ' + attr + '="' + usedAttributes[attr] + '"';
+        numUsedAttributes++;
     }        
 
     // Write styles
@@ -305,12 +316,13 @@ SVG_Element.prototype.toString = function(options, depth) {
 
     if (this.text.length + childString.length > 0) {
         str += ">" + options.newLine;
-        str += indent + "  " + this.text + options.newLine;
-        str += childString;
-        str += indent + "</" + this.tag + ">" + options.newLine;
+        if (this.text) {
+            str += indent + "  " + this.text + options.newLine;
+        }
+        str += childString + indent + "</" + this.tag + ">" + options.newLine;
     } else {
         // Don't write an empty element or a group with no children
-        if ((options.removeEmptyElements && usedAttributes.length === 0) || this.tag === 'g') {
+        if ((options.removeEmptyElements && numUsedAttributes === 0) || this.tag === 'g') {
             return "";
         }
         str += "/>" + options.newLine;
@@ -320,13 +332,12 @@ SVG_Element.prototype.toString = function(options, depth) {
 };
 
 // Create a string for the 'd' attribute of a path
-SVG_Element.prototype.getPathString = function(path, options) {
+SVG_Element.prototype.getPathString = function(options) {
     var coordString = "";
-    var pathCommands = this.parsePath(path);
 
-    if (pathCommands) {
-        var letters = pathCommands.letters;
-        var values = pathCommands.values;
+    if (this.pathCommands) {
+        var letters = this.pathCommands.letters;
+        var values = this.pathCommands.values;
 
         if (letters.length < 2 || (letters.length === 2 && letters[1] === 'z')) {
             return "";
@@ -349,23 +360,92 @@ SVG_Element.prototype.getPathString = function(path, options) {
     return coordString;
 };
 
-// Works with numbers in the form [number, units]
-// Might not be necessary to deal with units
-SVG_Element.prototype.applyTransformation = function(transform, attributes) {
-    var transformType = transform[0];
-    var transformValues = transform[1];
+SVG_Element.prototype.applyTransformation = function(transformType, transformValues, attributes) {
+    // TODO: Improve how this is done. Maybe have separate transformation functions
+    if (this.tag === 'path' && this.pathCommands) {
+        return this.transformPath(transformType, transformValues, attributes)
+    }
 
+    var x, y, width, height;
     if (this.tag === 'rect') {
-        var x = attributes.x || this.attributes.x;
-        var y = attributes.y || this.attributes.y;
+        x = 'x';
+        y = 'y';
+        width = 'width';
+        height = 'height';
+    } else if (this.tag === 'ellipse') {
+        x = 'cx';
+        y = 'cy';
+        width = 'rx';
+        height = 'ry';
+    }
+
+    if (x) {
+        attributes[x] = attributes[x] || 0;
+        attributes[y] = attributes[y] || 0;
+        attributes[width] = attributes[width] || 0;
+        attributes[height] = attributes[height] || 0;
 
         if (transformType === 'translate') {
-            attributes.x = x + (transformValues[0] || 0);
-            attributes.y = y + (transformValues[1] || 0);
+            attributes[x] += transformValues[0] || 0;
+            attributes[y] += transformValues[1] || 0;
+            return attributes;
+        }
+
+        if (transformType === 'scale') {
+            var scaleX = transformValues[0];
+            var scaleY = transformValues.length === 2 ? transformValues[1] : transformValues[0];
+            attributes[x] *= scaleX;
+            attributes[y] *= scaleY;
+            attributes[width] *= scaleX;
+            attributes[height] *= scaleY;
             return attributes;
         }
     }
     return false;
+};
+
+SVG_Element.prototype.transformPath = function(transformType, transformValues, attributes) {
+    var letters = this.pathCommands.letters;
+    var values = this.pathCommands.values;
+
+    // TODO: move these elsewhere
+    var simpleTranslations = 'MLQTCS';
+    var nullTranslations = 'mlhvqtcsZz';
+
+    var dx = transformValues[0] || 0;
+    var dy = transformValues[1] || 0;
+
+    if (transformType === 'translate') {
+        for (var i = 0; i < letters.length; i++) {
+            var letter = letters[i];
+            var value = values[i];
+
+            if (simpleTranslations.indexOf(letter) > -1) {
+                for (var j = 0; j < value.length; j += 2) {
+                    value[j] += dx;
+                    value[j + 1] += dy;
+                }
+            } else if (letter === 'H') {
+                for (var j = 0; j < value.length; j++) {
+                    value[j] += dx;
+                }
+            } else if (letter === 'V') {
+                for (var j = 0; j < value.length; j++) {
+                    value[j] += dy;
+                }
+            } else if (letter === 'A') {
+                for (var j = 0; j < values.length; j += 7) {
+                    values[j + 5] += dx;
+                    values[j + 6] += dy;
+                }
+            } else if (nullTranslations.indexOf(letter) === -1) {
+                return false;
+            }
+        }
+
+        this.pathCommands.values = values;
+        return attributes;
+    }
 };
 
 // A wrapper for SVG_Elements which store the options for optimisation
@@ -389,10 +469,9 @@ var SVG_Object = function(jQuerySVG) {
         svgSizeTruncate: [0, 'decimal place'],
     };
 
-    //this.options.attributeNumTruncate = [1, 'order of magnitude'];
-
     this.options.nonEssentialStyles = nonEssentialStyles;
     this.options.namespaces = this.findNamespaces();
+    this.options.whitespace = 'pretty';
 };
 
 // Namespaces are attributes of the SVG element, prefaced with 'xmlns:'
