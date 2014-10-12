@@ -18,16 +18,11 @@ var SVG_Element = function(element, parents) {
                 $.extend(this.styles, this.parseStyle(attr.value));
             } else if (defaultStyles[attrName] !== undefined || nonEssentialStyles[attrName] !== undefined) {
                 // Style written as a separate attribute
-                this.styles[attrName] = attr.value;
+                this.styles[attrName] = this.parseNumber(attr.value);
+            } else if (this.tag === "path" && attrName === 'd') {
+                this.pathCommands = this.parsePath(attr.value);
             } else {
-                this.attributes[attrName] = attr.value;
-
-                // Parse path coordinates
-                if (this.tag === "path" && attrName === 'd') {
-                    this.pathCommands = this.parsePath(attr.value);
-                } else if (attrName === 'transform') {
-                    this.transformations = this.parseTransform(attr.value);
-                }
+                this.attributes[attrName] = this.parseNumber(attr.value);
             }
         }
     }
@@ -45,6 +40,20 @@ var SVG_Element = function(element, parents) {
         } else {
             this.children.push(new SVG_Element(child, this));
         }
+    }
+};
+
+// Parse digit string to digit, keeping any final units
+SVG_Element.prototype.parseNumber = function(str) {
+    // TODO: Maybe move regex somewhere else
+    var reDigit = /^\s*([-+]?[\d\.]+)([eE][-+]?[\d\.]+)?\s*(%|em|ex|px|pt|pc|cm|mm|in)\s*$/;
+    var digit = reDigit.exec(str);
+    var n = parseFloat(digit ? digit[1] + (digit[2] || "") : str);
+
+    if (isNaN(n)) {
+        return [str];
+    } else {
+        return [n, digit ? digit[3] : ""];
     }
 };
 
@@ -85,7 +94,7 @@ SVG_Element.prototype.parseStyle = function(styleString) {
         var value = styleArray[i].split(/\s*:\s*/);
         
         if (value.length === 2) {
-            styles[value[0]] = value[1];
+            styles[value[0]] = this.parseNumber(value[1]);
         }
     }
     
@@ -98,50 +107,12 @@ SVG_Element.prototype.parseTransform = function(transformString) {
 
     if (transformString) {
         while (transform = reTransform.exec(transformString)) {
-            digits = transform[2].split(/\s*,\s*/);
-            transforms.push(transform[1], $.map(digits, parseFloat))
+            digits = transform[2].split(/\s*[,\s]+\s*/);
+            transforms.push([transform[1], $.map(digits, parseFloat)])
         }
     }
 
     return transforms;
-
-};
-
-// Return an array of attributes that have not been removed
-SVG_Element.prototype.getUsedAttributes = function(options) {
-    var usedAttributes = [];
-    var transformedAttributes = {};
-
-    // TODO if one attribute is a transformation then apply it now
-
-    for (var attr in this.attributes) {
-        // Remove attributes whose namespace has been removed and links to namespace URIs
-        if (attr.indexOf(':') !== -1) {
-            var ns = attr.split(':');
-            if (!options.namespaces[ns[0]] || (ns[0] === 'xmlns' && !options.namespaces[ns[1]])) {
-                continue;
-            }
-        }
-        
-        var value = transformedAttributes[attr] || this.attributes[attr];
-
-        // Remove position attributes equal to 0 (the default value)
-        if (options.removeDefaultAttributes &&
-            positionAttributes.indexOf(attr) !== -1 &&
-            options.positionDecimals(value) == 0) {
-            continue;
-        }
-
-        // TODO: only remove ids that are not referenced elsewhere
-        if (options.removeIDs && attr === 'id') {
-            continue;
-        }
-
-        // TODO: also add value
-        usedAttributes.push(attr);
-    }
-    
-    return usedAttributes;
 };
 
 // Return an object mapping attribute: value
@@ -150,9 +121,24 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
     var usedAttributes = {};
     var transformedAttributes = {};
 
-    // TODO: If one attribute is a transformation then apply
-    //        and add to transformedAttributes
-    //        remember to remove transformation
+    // If one attribute is a transformation then try to apply it
+    // If successful, remove the transformation
+    if (options.applyTransforms && this.attributes.transform) {
+        var transforms = this.parseTransform(this.attributes.transform);
+
+        for (var i = 0; i < transforms.length; i++) {
+            newAttributes = this.applyTransformation(transforms[i], transformedAttributes);
+            if (newAttributes) {
+                transformedAttributes = newAttributes;
+                transformedAttributes.transform = "";
+            } else {
+                // For now, if any transform fails, give up
+                // TODO: fix this
+                transformedAttributes = {};
+                break;
+            }
+        }
+    }
 
     for (var attr in this.attributes) {
         // Remove attributes whose namespace has been removed and links to namespace URIs
@@ -163,7 +149,10 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
             }
         }
         
-        var value = transformedAttributes[attr] || this.attributes[attr];
+        var value = transformedAttributes[attr] === undefined ? this.attributes[attr] : transformedAttributes[attr];
+
+        // Attributes shouldn't be empty and this removes applied transformations
+        if (value === "") { continue; }
 
         // Remove position attributes equal to 0 (the default value)
         if (options.removeDefaultAttributes &&
@@ -215,12 +204,18 @@ SVG_Element.prototype.getUsedStyles = function(options) {
     }
 
     for (var style in this.styles) {
-        var value = options.styleDecimals(this.styles[style]);
+        var value = this.styles[style];
 
-        // If we're multiplying positons by powers of 10, certain styles also need multiplying
-        // TODO: will also have to change font sizes
-        if (options.attributeNumTruncate[1] === 'order of magnitude' && style === 'stroke-width') {
-            value = options.positionDecimals(this.styles[style]);
+        if (value.length > 1) {
+            // If we're multiplying positons by powers of 10, certain styles also need multiplying
+            // TODO: will also have to change font sizes
+            if (options.attributeNumTruncate[1] === 'order of magnitude' && style === 'stroke-width') {
+                value = options.positionDecimals(value[0]) + value[1];
+            } else {
+                value = options.styleDecimals(value[0]) + value[1];
+            }
+        } else {
+            value = value[0];
         }
 
         // Simplify colours, e.g. #ffffff -> #fff
@@ -295,7 +290,7 @@ SVG_Element.prototype.toString = function(options, depth) {
         return childString;
     }
 
-    // Write child information
+    // Get child information
     var childString = "";
     for (var i = 0; i < this.children.length; i++) {
         childString += this.children[i].toString(options, depth + 1);
@@ -303,12 +298,8 @@ SVG_Element.prototype.toString = function(options, depth) {
 
     if (this.text.length + childString.length > 0) {
         str += ">" + options.newLine;
-        if (this.text) {
-            str += indent + "  " + this.text + options.newLine;
-        }
-        if (childString) {
-            str += childString;
-        }
+        str += indent + "  " + this.text + options.newLine;
+        str += childString;
         str += indent + "</" + this.tag + ">" + options.newLine;
     } else {
         // Don't write an empty element or a group with no children
@@ -350,8 +341,23 @@ SVG_Element.prototype.getPathString = function(options) {
     return coordString;
 };
 
-SVG_Element.prototype.applyTransform = function() {
+// Works with numbers in the form [number, units]
+// Might not be necessary to deal with units
+SVG_Element.prototype.applyTransformation = function(transform, attributes) {
+    var transformType = transform[0];
+    var transformValues = transform[1];
 
+    if (this.tag === 'rect') {
+        var x = attributes.x || this.attributes.x;
+        var y = attributes.y || this.attributes.y;
+
+        if (transformType === 'translate') {
+            attributes.x = [x[0] + (transformValues[0] || 0), x[1]];
+            attributes.y = [y[0] + (transformValues[1] || 0), y[1]];
+            return attributes;
+        }
+    }
+    return false;
 };
 
 // A wrapper for SVG_Elements which store the options for optimisation
