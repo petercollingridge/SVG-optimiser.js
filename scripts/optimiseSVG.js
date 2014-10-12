@@ -110,7 +110,10 @@ SVG_Element.prototype.parseTransform = function(transformString) {
 // Return an array of attributes that have not been removed
 SVG_Element.prototype.getUsedAttributes = function(options) {
     var usedAttributes = [];
-    
+    var transformedAttributes = {};
+
+    // TODO if one attribute is a transformation then apply it now
+
     for (var attr in this.attributes) {
         // Remove attributes whose namespace has been removed and links to namespace URIs
         if (attr.indexOf(':') !== -1) {
@@ -120,9 +123,12 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
             }
         }
         
+        var value = transformedAttributes[attr] || this.attributes[attr];
+
+        // Remove position attributes equal to 0 (the default value)
         if (options.removeDefaultAttributes &&
             positionAttributes.indexOf(attr) !== -1 &&
-            options.positionDecimals(this.attributes[attr]) == 0) {
+            options.positionDecimals(value) == 0) {
             continue;
         }
 
@@ -131,14 +137,69 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
             continue;
         }
 
+        // TODO: also add value
         usedAttributes.push(attr);
     }
     
     return usedAttributes;
 };
 
+// Return an object mapping attribute: value
+// Only return used attributes and optimised values
+SVG_Element.prototype.getUsedAttributes = function(options) {
+    var usedAttributes = {};
+    var transformedAttributes = {};
+
+    // TODO: If one attribute is a transformation then apply
+    //        and add to transformedAttributes
+    //        remember to remove transformation
+
+    for (var attr in this.attributes) {
+        // Remove attributes whose namespace has been removed and links to namespace URIs
+        if (attr.indexOf(':') !== -1) {
+            var ns = attr.split(':');
+            if (!options.namespaces[ns[0]] || (ns[0] === 'xmlns' && !options.namespaces[ns[1]])) {
+                continue;
+            }
+        }
+        
+        var value = transformedAttributes[attr] || this.attributes[attr];
+
+        // Remove position attributes equal to 0 (the default value)
+        if (options.removeDefaultAttributes &&
+            positionAttributes.indexOf(attr) !== -1 &&
+            options.positionDecimals(value) == 0) {
+            continue;
+        }
+
+        // TODO: only remove ids that are not referenced elsewhere
+        if (options.removeIDs && attr === 'id') {
+            continue;
+        }
+
+        // Process values
+
+        // TODO: convert tags to lowercase so will work with 'viewbox'
+        // TODO: also apply decimal places to transforms
+        if (attr === 'viewBox' || attr === 'points') {
+            var values = value.split(/[\s,]+/);
+            value = $.map(values, options.positionDecimals).join(" ");
+        } else if (this.tag === 'svg' && (attr === 'width' || attr === 'height')) {
+            value = options.svgSizeDecimals(value);
+        } else if (this.tag === 'path' && attr === 'd') {
+            value = this.getPathString(options);
+        } else if (positionAttributes.indexOf(attr) !== -1 ) {
+            value = options.positionDecimals(value);
+        }
+
+        usedAttributes[attr] = value;
+    }
+    
+    return usedAttributes;
+};
 
 // Return a list of strings in the form "style:value" for the styles that are to be used
+// They are sorted alphabetically so the strings can be compared for sets of the same style
 SVG_Element.prototype.getUsedStyles = function(options) {
     if (!this.styles) { return []; }
 
@@ -194,49 +255,38 @@ SVG_Element.prototype.toString = function(options, depth) {
 
     var depth = depth || 0;
     var indent = (options.whitespace === 'remove') ? '' : new Array(depth + 1).join('  ');
-
     var str = indent + '<' + this.tag;
 
-    // Write attributes with numbers truncated in the prefered way
     var usedAttributes = this.getUsedAttributes(options);
-    for (var i = 0; i < usedAttributes.length; i++) {
-        var attr = usedAttributes[i];
-        str += ' ' + attr + '="';
 
-        // TODO: convert tags to lowercase so will work with 'viewbox'
-        // TODO: also apply decimal places to transforms
-        if (attr === 'viewBox' || attr === 'points') {
-            var values = this.attributes[attr].split(/[\s,]+/);
-            values = $.map(values, options.positionDecimals);
-            str += values.join(" ");
-        } else if (this.tag === 'path' && attr === 'd') {
-            var coordString = this.getPathString(options);
-            // Don't show a path with no coordinates
-            if (!coordString) { return ""; }
-            str += coordString;
-        } else if (this.tag === 'svg' && (attr === 'width' || attr === 'height')) {
-            str += options.svgSizeDecimals(this.attributes[attr]);
-        } else if (positionAttributes.indexOf(attr) !== -1 ) {
-            str += options.positionDecimals(this.attributes[attr]);
-        } else {
-            str += this.attributes[attr];
+    // If shape element lacks some dimension then don't draw it
+    if (options.removeRedundantShapes && essentialAttributes[this.tag]) {
+        var attributes = essentialAttributes[this.tag];
+        for (var i = 0; i < attributes.length; i++) {
+            if (!usedAttributes[attributes[i]]) {
+                return "";
+            }
         }
-        str += '"';
     }
 
+    for (var attr in usedAttributes) {
+        str += ' ' + attr + '="' + usedAttributes[attr] + '"';
+    }        
 
     // Write styles
     var usedStyles = this.getUsedStyles(options);
     if (usedStyles.length > 1) {
+        // Write as all styles in a style attribute
         str += ' style="' + usedStyles.join(';') + '"';
     } else if (usedStyles.length === 1) {
+        // Only one style, so just write that attribute
         var style = usedStyles[0].split(':');
         str += ' ' + style[0] + '="' + style[1] + '"';
     }
 
     // Don't write group if it has no attributes, but do write its children
     // Assume g element has no text (which it shouldn't)
-    // TODO: if g contains styles could add styles to children (only if using CSS)
+    // TODO: if g contains styles could add styles to children (only if using CSS or there is 1 child)
     if (this.tag === 'g' && options.removeCleanGroups && !usedAttributes && !usedStyles) {
         var childString = "";
         for (var i = 0; i < this.children.length; i++) {
@@ -261,7 +311,8 @@ SVG_Element.prototype.toString = function(options, depth) {
         }
         str += indent + "</" + this.tag + ">" + options.newLine;
     } else {
-        if (options.removeEmptyElements && usedAttributes.length === 0) {
+        // Don't write an empty element or a group with no children
+        if ((options.removeEmptyElements && usedAttributes.length === 0) || this.tag === 'g') {
             return "";
         }
         str += "/>" + options.newLine;
@@ -277,6 +328,10 @@ SVG_Element.prototype.getPathString = function(options) {
     if (this.pathCommands) {
         var letters = this.pathCommands.letters;
         var values = this.pathCommands.values;
+
+        if (letters.length < 2 || (letters.length === 2 && letters[1] === 'z')) {
+            return "";
+        }
 
         var currentLetter;
         for (var i = 0; i < letters.length; i++) {
@@ -312,6 +367,7 @@ var SVG_Object = function(jQuerySVG) {
         removeDefaultStyles: true,
         removeNonEssentialStyles: true,
         removeEmptyElements: true,
+        removeRedundantShapes: true,
         removeCleanGroups: true,
         applyTransforms: true,
         attributeNumTruncate: [1, 'decimal place'],
@@ -319,7 +375,7 @@ var SVG_Object = function(jQuerySVG) {
         svgSizeTruncate: [0, 'decimal place'],
     };
 
-    this.options.attributeNumTruncate = [1, 'order of magnitude'];
+    //this.options.attributeNumTruncate = [1, 'order of magnitude'];
 
     this.options.nonEssentialStyles = nonEssentialStyles;
     this.options.namespaces = this.findNamespaces();
