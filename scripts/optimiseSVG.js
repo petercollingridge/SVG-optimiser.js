@@ -19,10 +19,8 @@ var SVG_Element = function(element, parents) {
             } else if (defaultStyles[attrName] !== undefined || nonEssentialStyles[attrName] !== undefined) {
                 // Style written as a separate attribute
                 this.styles[attrName] = this.parseNumber(attr.value);
-            } else if (this.tag === "path" && attrName === 'd') {
-                this.pathCommands = this.parsePath(attr.value);
             } else {
-                this.attributes[attrName] = this.parseNumber(attr.value);
+                this.attributes[attrName] = attr.value;
             }
         }
     }
@@ -121,6 +119,13 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
     var usedAttributes = {};
     var transformedAttributes = {};
 
+    // Parse position values as numbers
+    for (var attr in this.attributes) {
+        if (positionAttributes.indexOf(attr) !== -1) {
+            transformedAttributes[attr] = parseFloat(this.attributes[attr]);
+        }
+    }
+
     // If one attribute is a transformation then try to apply it
     // If successful, remove the transformation
     if (options.applyTransforms && this.attributes.transform) {
@@ -152,6 +157,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
         var value = transformedAttributes[attr] === undefined ? this.attributes[attr] : transformedAttributes[attr];
 
         // Attributes shouldn't be empty and this removes applied transformations
+
         if (value === "") { continue; }
 
         // Remove position attributes equal to 0 (the default value)
@@ -160,6 +166,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
             options.positionDecimals(value) == 0) {
             continue;
         }
+
 
         // TODO: only remove ids that are not referenced elsewhere
         if (options.removeIDs && attr === 'id') {
@@ -176,7 +183,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
         } else if (this.tag === 'svg' && (attr === 'width' || attr === 'height')) {
             value = options.svgSizeDecimals(value);
         } else if (this.tag === 'path' && attr === 'd') {
-            value = this.getPathString(options);
+            value = this.getPathString(value, options);
         } else if (positionAttributes.indexOf(attr) !== -1 ) {
             value = options.positionDecimals(value);
         }
@@ -313,12 +320,13 @@ SVG_Element.prototype.toString = function(options, depth) {
 };
 
 // Create a string for the 'd' attribute of a path
-SVG_Element.prototype.getPathString = function(options) {
+SVG_Element.prototype.getPathString = function(path, options) {
     var coordString = "";
+    var pathCommands = this.parsePath(path);
 
-    if (this.pathCommands) {
-        var letters = this.pathCommands.letters;
-        var values = this.pathCommands.values;
+    if (pathCommands) {
+        var letters = pathCommands.letters;
+        var values = pathCommands.values;
 
         if (letters.length < 2 || (letters.length === 2 && letters[1] === 'z')) {
             return "";
@@ -352,8 +360,8 @@ SVG_Element.prototype.applyTransformation = function(transform, attributes) {
         var y = attributes.y || this.attributes.y;
 
         if (transformType === 'translate') {
-            attributes.x = [x[0] + (transformValues[0] || 0), x[1]];
-            attributes.y = [y[0] + (transformValues[1] || 0), y[1]];
+            attributes.x = x + (transformValues[0] || 0);
+            attributes.y = y + (transformValues[1] || 0);
             return attributes;
         }
     }
