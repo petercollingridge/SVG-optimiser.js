@@ -45,7 +45,8 @@ var nonEssentialStyles = {
     'fill-rule' : true,
     'clip-rule' : true,
     'nodetypes' : true,
-    'stroke-miterlimit' : true
+    'stroke-miterlimit' : true,
+    'enable-background': true
 };
 
 // Attributes that are required otherwise no shape is drawn
