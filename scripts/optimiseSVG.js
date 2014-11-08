@@ -350,7 +350,7 @@ SVG_Element.prototype.getPathString = function(options) {
             
             if (values[i]) {
                 for (var j = 0; j < values[i].length; j++) {
-                    if (j > 0  && values[i][j] >= 0) coordString += " ";
+                    coordString += (j > 0  || values[i][j] == '0' ? " " : "");
                     coordString += options.positionDecimals(values[i][j]);
                 }
             }
@@ -477,16 +477,16 @@ var SVG_Object = function(jQuerySVG) {
 // Namespaces are attributes of the SVG element, prefaced with 'xmlns:'
 // Create a hash mapping namespaces to false, except for the SVG namespace
 SVG_Object.prototype.findNamespaces = function() {
-        var namespaces = {};
+    var namespaces = {};
 
-        for (attr in this.elements.attributes) {
-            if (attr.slice(0,6) === 'xmlns:') {
-                var ns = attr.split(':')[1];
-                namespaces[ns] = (ns === 'svg');
-            }
+    for (attr in this.elements.attributes) {
+        if (attr.slice(0,6) === 'xmlns:') {
+            var ns = attr.split(':')[1];
+            namespaces[ns] = (ns === 'svg');
         }
+    }
 
-        return namespaces;
+    return namespaces;
 };
 
 SVG_Object.prototype.toString = function() {
