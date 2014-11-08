@@ -306,7 +306,7 @@ SVG_Element.prototype.toString = function(options, depth) {
     }        
 
     // Write styles
-    if (options.styles === 'CSS' && this.class) {
+    if (options.styles === 'CSS' || options.styles === 'optimal' && this.class) {
         str += ' class="' + this.class + '"';
     } else {
         var usedStyles = this.getUsedStyles(options);
@@ -474,28 +474,40 @@ SVG_Element.prototype.transformPath = function(transformType, transformValues, a
 };
 
 // Style element contains CSS data
-// TODO: deal with what to do if this already exists
-var SVG_Style_Element = function(data) {
-    this.data = data;
+var SVG_Style_Element = function() {
+    this.data = '';
+
+    this.toString = function (options) {
+        if ((options.styles === 'CSS' || options.styles === 'optimal') &&  this.data) {
+            return '<style>' + options.newLine + this.data + options.newLine + '</style>';
+        } else {
+            return '';
+        }
+    }
+
+    // Empty function to avoid problems
+    this.createCSS = function() {};
 };
 
-SVG_Style_Element.prototype.toString = function (options) {
-    if (options.styles === 'CSS' && this.data) {
-        return '<style>' + options.newLine + this.data + options.newLine + '</style>';
-    } else {
-        return '';
-    }
-}
+/************************************************************************
+    A wrapper for SVG_Elements which store the options for optimisation
+    Build from a jQuery object representing the SVG
+    options:
+        whitespace: 'remove', 'pretty'
+        styles: 'optimal', 'CSS', 'styleString'
+*************************************************************************/
 
-// A wrapper for SVG_Elements which store the options for optimisation
-// Build from a jQuery object representing the SVG
 var SVG_Object = function(jQuerySVG) {
     this.elements = new SVG_Element(jQuerySVG, null);
+
+    // Add an empty style element
+    // TODO: check one doesn't already exist
+    this.elements.children.unshift(new SVG_Style_Element());
 
     // Set default options
     this.options = {
         whitespace: 'remove',
-        styles: 'CSS',
+        styles: 'optimal',
         removeIDs: false,
         removeDefaultAttributes: true,
         removeDefaultStyles: true,
@@ -537,7 +549,7 @@ SVG_Object.prototype.toString = function() {
     this.options.styleDecimals = this.getDecimalOptimiserFunction(this.options.styleNumTruncate);
     this.options.svgSizeDecimals = this.getDecimalOptimiserFunction(this.options.svgSizeTruncate);
 
-    if (this.options.styles === 'CSS') {
+    if (this.options.styles === 'CSS' || this.options.styles === 'optimal') {
         this.createCSS();
     }
 
@@ -611,25 +623,21 @@ SVG_Object.prototype.createCSS = function() {
     }
 
     var styleString = '';
-    var removeWhitespace = (this.options.whitespace === 'remove');
-
 
     for (var styles in this.stylesOfElements) {
         var elements = this.stylesOfElements[styles]
-        if (elements.length === 1) { continue; }
+        if (this.options.styles === 'optimal' && elements.length === 1) { continue; }
 
         var styleName = getClassName(counter);
-        var styleList = styles.split(';');
-
-        styleString += '.' + styleName + '{'
-        styleString += removeWhitespace ? '' : '\n'
+        styleString += '.' + styleName + '{' + this.options.newLine;
 
         // TODO: style this more nicely when using whitespace
+        var styleList = styles.split(';');
         for (var i = 0; i < styleList.length; i++) {
-            styleString += removeWhitespace ? styleList[i] + ';' : '  ' + styleList[i] + ';\n';
+            styleString += styleList[i] + ';' + this.options.newLine;
         }
 
-        styleString += removeWhitespace ? '}' : '}\n'
+        styleString += '}' + this.options.newLine;
 
         // TODO: Fix what to do here if a class already exists (unlikely)
         for (var i = 0; i < elements.length; i++) {
@@ -639,6 +647,6 @@ SVG_Object.prototype.createCSS = function() {
         counter++;
     }
 
-    // Add style element as first child of SVG element
-    this.elements.children.unshift(new SVG_Style_Element(styleString));
+    // Set style element's data
+    this.elements.children[0].data = styleString;
 };
