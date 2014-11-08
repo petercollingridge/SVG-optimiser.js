@@ -37,7 +37,7 @@ var defaultStyles = {
     'pointer-events': 'visiblePainted'
 };
 
-// Styles that can probably be removed
+// Attributes that can probably be removed
 var nonEssentialStyles = {
     'color' : true,
     'display' : true,
@@ -46,7 +46,9 @@ var nonEssentialStyles = {
     'clip-rule' : true,
     'nodetypes' : true,
     'stroke-miterlimit' : true,
-    'enable-background': true
+    'enable-background': true,
+    'baseProfile': true,
+    'version': true
 };
 
 // Attributes that are required otherwise no shape is drawn

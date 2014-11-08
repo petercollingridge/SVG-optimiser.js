@@ -5,6 +5,12 @@
 	padding: 5px;
 }
 
+#input-svg {
+	width:800px;
+	height:200px;
+	border: 1px solid #888;
+}
+
 #output-container {
 	white-space: pre-wrap;
 	font-family: Fixed, 'Courier New', monospace;

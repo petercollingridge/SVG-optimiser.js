@@ -5,6 +5,7 @@ var SVG_Element = function(element, parents) {
     this.attributes = {};
     this.styles = {};
     this.parents = parents;
+    this.children = [];
     this.text = "";
 
     // Add attributes to hash
@@ -26,8 +27,6 @@ var SVG_Element = function(element, parents) {
     }
 
     // Add children
-    this.children = [];
-
     for (var i = 0; i < element.childNodes.length; i++) {
         var child = element.childNodes[i];
         if (child instanceof Text) {
@@ -128,7 +127,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
         }
     }
 
-    console.log(this.getPathString(options))
+    //console.log(this.getPathString(options))
 
     // If one attribute is a transformation then try to apply transformations in reverse order
     // If successful, remove the transformation
@@ -142,7 +141,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
                 transformedAttributes = newAttributes;
                 transformedAttributes.transform = "";
             } else {
-                console.log(this.getPathString(options))
+                //console.log(this.getPathString(options))
                 // For now, if any transform fails, give up
                 // TODO: fix this
                 // TODO: truncate decimals and remove if identity transformation
@@ -152,7 +151,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
         }
     }
 
-    console.log(this.getPathString(options))
+    //console.log(this.getPathString(options))
 
     for (var attr in this.attributes) {
         // Remove attributes whose namespace has been removed and links to namespace URIs
@@ -253,6 +252,26 @@ SVG_Element.prototype.getUsedStyles = function(options) {
     return usedStyles.sort();
 };
 
+// Get a style string for this element and add to the passed in map
+// of stylesOfElements
+SVG_Element.prototype.createCSS = function(options, stylesOfElements) {
+    var styles = this.getUsedStyles(options);
+
+    if (styles.length > 0) {
+        var styleString = styles.join(";");
+
+        if (stylesOfElements[styleString]) {
+            stylesOfElements[styleString].push(this);
+        } else {
+            stylesOfElements[styleString] = [this];
+        }
+    }
+
+    for (var i = 0; i < this.children.length; i++) {
+        this.children[i].createCSS(options, stylesOfElements);
+    }
+}
+
 // Return a string representing the SVG element
 // All the optimisation is done here, so none of the original information is lost
 SVG_Element.prototype.toString = function(options, depth) {
@@ -287,15 +306,20 @@ SVG_Element.prototype.toString = function(options, depth) {
     }        
 
     // Write styles
-    var usedStyles = this.getUsedStyles(options);
-    if (usedStyles.length > 1) {
-        // Write as all styles in a style attribute
-        str += ' style="' + usedStyles.join(';') + '"';
-    } else if (usedStyles.length === 1) {
-        // Only one style, so just write that attribute
-        var style = usedStyles[0].split(':');
-        str += ' ' + style[0] + '="' + style[1] + '"';
+    if (options.styles === 'CSS' && this.class) {
+        str += ' class="' + this.class + '"';
+    } else {
+        var usedStyles = this.getUsedStyles(options);
+        if (usedStyles.length > 1) {
+            // Write as all styles in a style attribute
+            str += ' style="' + usedStyles.join(';') + '"';
+        } else if (usedStyles.length === 1) {
+            // Only one style, so just write that attribute
+            var style = usedStyles[0].split(':');
+            str += ' ' + style[0] + '="' + style[1] + '"';
+        }
     }
+
 
     // Don't write group if it has no attributes, but do write its children
     // Assume g element has no text (which it shouldn't)
@@ -449,6 +473,20 @@ SVG_Element.prototype.transformPath = function(transformType, transformValues, a
     }
 };
 
+// Style element contains CSS data
+// TODO: deal with what to do if this already exists
+var SVG_Style_Element = function(data) {
+    this.data = data;
+};
+
+SVG_Style_Element.prototype.toString = function (options) {
+    if (options.styles === 'CSS' && this.data) {
+        return '<style>' + options.newLine + this.data + options.newLine + '</style>';
+    } else {
+        return '';
+    }
+}
+
 // A wrapper for SVG_Elements which store the options for optimisation
 // Build from a jQuery object representing the SVG
 var SVG_Object = function(jQuerySVG) {
@@ -457,6 +495,7 @@ var SVG_Object = function(jQuerySVG) {
     // Set default options
     this.options = {
         whitespace: 'remove',
+        styles: 'CSS',
         removeIDs: false,
         removeDefaultAttributes: true,
         removeDefaultStyles: true,
@@ -466,13 +505,14 @@ var SVG_Object = function(jQuerySVG) {
         removeCleanGroups: true,
         applyTransforms: true,
         attributeNumTruncate: [1, 'decimal place'],
-        styleNumTruncate: [2, 'significant figure'],
+        styleNumTruncate: [1, 'significant figure'],
         svgSizeTruncate: [0, 'decimal place'],
     };
 
     this.options.nonEssentialStyles = nonEssentialStyles;
     this.options.namespaces = this.findNamespaces();
-    this.options.whitespace = 'pretty';
+
+    //this.options.whitespace = 'pretty';
 };
 
 // Namespaces are attributes of the SVG element, prefaced with 'xmlns:'
@@ -496,6 +536,10 @@ SVG_Object.prototype.toString = function() {
     this.options.positionDecimals = this.getDecimalOptimiserFunction(this.options.attributeNumTruncate);
     this.options.styleDecimals = this.getDecimalOptimiserFunction(this.options.styleNumTruncate);
     this.options.svgSizeDecimals = this.getDecimalOptimiserFunction(this.options.svgSizeTruncate);
+
+    if (this.options.styles === 'CSS') {
+        this.createCSS();
+    }
 
     return this.elements.toString(this.options);
 };
@@ -542,4 +586,59 @@ SVG_Object.prototype.getDecimalOptimiserFunction = function(parameters) {
         // This shouldn't happen, but just in case, return an identity function
         return function(str) { return str; };
     }
+};
+
+// Convert styles to CSS
+// TODO: make sure this works with existing classes
+// TODO: make this work if a style element already exist (?)
+SVG_Object.prototype.createCSS = function() {
+    // Map style strings to elements with those styles
+    this.stylesOfElements = {};
+    this.elements.createCSS(this.options, this.stylesOfElements);
+
+    // These are used to define class names
+    var letters = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var counter = 0;
+
+    var getClassName = function(n) {
+        var name = ''
+        var len = letters.length;
+        while (n >= 0) {
+            name += letters.charAt(n % len);
+            n -= len;
+        }
+        return name;
+    }
+
+    var styleString = '';
+    var removeWhitespace = (this.options.whitespace === 'remove');
+
+
+    for (var styles in this.stylesOfElements) {
+        var elements = this.stylesOfElements[styles]
+        if (elements.length === 1) { continue; }
+
+        var styleName = getClassName(counter);
+        var styleList = styles.split(';');
+
+        styleString += '.' + styleName + '{'
+        styleString += removeWhitespace ? '' : '\n'
+
+        // TODO: style this more nicely when using whitespace
+        for (var i = 0; i < styleList.length; i++) {
+            styleString += removeWhitespace ? styleList[i] + ';' : '  ' + styleList[i] + ';\n';
+        }
+
+        styleString += removeWhitespace ? '}' : '}\n'
+
+        // TODO: Fix what to do here if a class already exists (unlikely)
+        for (var i = 0; i < elements.length; i++) {
+            elements[i].class = styleName;
+        }
+
+        counter++;
+    }
+
+    // Add style element as first child of SVG element
+    this.elements.children.unshift(new SVG_Style_Element(styleString));
 };
