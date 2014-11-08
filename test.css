@@ -1,0 +1,12 @@
+#optimise-container > div {
+	display: inline-block;
+	background: #e8e8e8;
+	margin: 5px;
+	padding: 5px;
+}
+
+#output-container {
+	white-space: pre-wrap;
+	font-family: Fixed, 'Courier New', monospace;
+	font-size: 12px;
+}
