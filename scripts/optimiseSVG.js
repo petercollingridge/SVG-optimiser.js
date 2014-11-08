@@ -350,8 +350,9 @@ SVG_Element.prototype.getPathString = function(options) {
             
             if (values[i]) {
                 for (var j = 0; j < values[i].length; j++) {
-                    coordString += (j > 0  || values[i][j] == '0' ? " " : "");
-                    coordString += options.positionDecimals(values[i][j]);
+                    var n = values[i][j];
+                    var d = options.positionDecimals(n);
+                    coordString += (j > 0 && (n > 0 || d == '0')) ? " " + d : d;
                 }
             }
         }
