@@ -335,6 +335,7 @@ SVG_Element.prototype.toString = function(options, depth) {
         }
     }
 
+    // Write attributes and count how many have been used
     var numUsedAttributes = 0;
     for (var attr in usedAttributes) {
         str += ' ' + attr + '="' + usedAttributes[attr] + '"';
@@ -342,18 +343,16 @@ SVG_Element.prototype.toString = function(options, depth) {
     }
 
     // Write styles
+    var usedStyles = this.getUsedStyles(options);
     if (options.styles === 'CSS' || options.styles === 'optimal' && this.class) {
         str += ' class="' + this.class + '"';
-    } else {
-        var usedStyles = this.getUsedStyles(options);
-        if (usedStyles.length > 1) {
-            // Write as all styles in a style attribute
-            str += ' style="' + usedStyles.join(';') + '"';
-        } else if (usedStyles.length === 1) {
-            // Only one style, so just write that attribute
-            var style = usedStyles[0].split(':');
-            str += ' ' + style[0] + '="' + style[1] + '"';
-        }
+    } else if (usedStyles.length > 1) {
+        // Write as all styles in a style attribute
+        str += ' style="' + usedStyles.join(';') + '"';
+    } else if (usedStyles.length === 1) {
+        // Only one style, so just write that attribute
+        var style = usedStyles[0].split(':');
+        str += ' ' + style[0] + '="' + style[1] + '"';
     }
 
     // Don't write group if it has no attributes, but do write its children
