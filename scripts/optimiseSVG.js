@@ -98,24 +98,30 @@ SVG_Element.prototype.parseStyle = function(styleString) {
     return styles;
 };
 
-SVG_Element.prototype.parseTransform = function(transformString) {
+// Convert transform attribute into an array of [transformation, digits]
+SVG_Element.prototype.parseTransforms = function() {
     var reTransform = /([a-z]+)\s*\(([-\+\d\.\s,e]+)\)/gi;
-    var transform, transforms = [];
+    var transform
+    this.transforms = [];
 
-    if (transformString) {
-        while (transform = reTransform.exec(transformString)) {
+    if (this.attributes.transform) {
+        while (transform = reTransform.exec(this.attributes.transform)) {
             digits = transform[2].split(/\s*[,\s]+\s*/);
-            transforms.push([transform[1], $.map(digits, parseFloat)])
+            this.transforms.push({
+                type: transform[1],
+                digits: $.map(digits, parseFloat)
+            });
         }
     }
 
-    return transforms;
+    for (var i = 0; i < this.children.length; i++) {
+        this.children[i].parseTransforms();
+    }
 };
 
 // Return an object mapping attribute: value
 // Only return used attributes and optimised values
 SVG_Element.prototype.getUsedAttributes = function(options) {
-    var usedAttributes = {};
     var transformedAttributes = {};
 
     // Parse position values as numbers
@@ -127,32 +133,63 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
         }
     }
 
-    //console.log(this.getPathString(options))
+    //console.log(transformedAttributes);
 
     // If one attribute is a transformation then try to apply transformations in reverse order
     // If successful, remove the transformation
-    if (options.applyTransforms && this.attributes.transform) {
-        var transforms = this.parseTransform(this.attributes.transform);
+    while (this.transforms.length > 0) {
+        var transformation = this.transforms.pop();
 
-        for (var i = transforms.length - 1; i >= 0; i--) {
-            var transform = transforms[i];
-            newAttributes = this.applyTransformation(transform[0], transform[1], transformedAttributes);
+        // If this is a group, test whether we can apply this transform to its child elements
+        // If so, remove the transform from the group and apply to each child
+        // If there is only one child element move the transform anyway because
+        // we might be able to get then be able to get rid of the group element
+        if (this.tag === 'g') {
+            var applyTransform = true;
+            if (this.children.length > 1) {
+                for (var i = 0; i < this.children.length; i++) {
+                    if (!this.children[i].canTransform(transformation)) {
+                        applyTransform = false;
+                        break;
+                    }
+                }                    
+            }
+
+            if (applyTransform) {
+                // Add transformation to the front of children transforms
+                // TODO: check adding to the front is correct
+                for (var i = 0; i < this.children.length; i++) {
+                    this.children[i].transforms.unshift(transformation);
+                }
+            } else {
+                // Failed to apply transform, so add it back
+                this.transforms.push(transformation);
+                break;
+            }
+        } else {
+            // Not a group so try to apply to this element
+            var newAttributes = this.applyTransformation(transformation, transformedAttributes);
             if (newAttributes) {
                 transformedAttributes = newAttributes;
-                transformedAttributes.transform = "";
             } else {
-                //console.log(this.getPathString(options))
-                // For now, if any transform fails, give up
-                // TODO: fix this
-                // TODO: truncate decimals and remove if identity transformation
-                transformedAttributes = {};
+                // Failed to apply transform, so add it back
+                this.transforms.push(transformation);
                 break;
             }
         }
     }
 
+    transformedAttributes.transform = "";
+    for (var i = 0; i < this.transforms.length; i++) {
+        // Convert remaining transformations back into a string
+        // TODO: truncate decimals and remove if identity transformation
+        var transform = this.transforms[i]
+        transformedAttributes.transform += transform.type + "(" + transform.digits.join(" ") + ")";
+    }
+
     //console.log(this.getPathString(options))
 
+    var usedAttributes = {};
     for (var attr in this.attributes) {
         // Remove attributes whose namespace has been removed and links to namespace URIs
         if (attr.indexOf(':') !== -1) {
@@ -174,7 +211,6 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
             options.positionDecimals(value) == 0) {
             continue;
         }
-
 
         // TODO: only remove ids that are not referenced elsewhere
         if (options.removeIDs && attr === 'id') {
@@ -303,7 +339,7 @@ SVG_Element.prototype.toString = function(options, depth) {
     for (var attr in usedAttributes) {
         str += ' ' + attr + '="' + usedAttributes[attr] + '"';
         numUsedAttributes++;
-    }        
+    }
 
     // Write styles
     if (options.styles === 'CSS' || options.styles === 'optimal' && this.class) {
@@ -320,11 +356,11 @@ SVG_Element.prototype.toString = function(options, depth) {
         }
     }
 
-
     // Don't write group if it has no attributes, but do write its children
     // Assume g element has no text (which it shouldn't)
     // TODO: if g contains styles could add styles to children (only if using CSS or there is 1 child)
-    if (this.tag === 'g' && options.removeCleanGroups && !usedAttributes && !usedStyles) {
+
+    if (this.tag === 'g' && options.removeCleanGroups && !numUsedAttributes && !usedStyles.length) {
         var childString = "";
         for (var i = 0; i < this.children.length; i++) {
             childString += this.children[i].toString(options, depth + 1);
@@ -352,6 +388,7 @@ SVG_Element.prototype.toString = function(options, depth) {
         str += "/>" + options.newLine;
     }
 
+    options.numElements++;
     return str;
 };
 
@@ -385,10 +422,34 @@ SVG_Element.prototype.getPathString = function(options) {
     return coordString;
 };
 
-SVG_Element.prototype.applyTransformation = function(transformType, transformValues, attributes) {
+// Return true if this element can be transformed
+// Update this as more transformations are implemented
+SVG_Element.prototype.canTransform = function(transformation) {
+    if (this.tag !== 'g') {
+        var implementedTransformations = {
+            'translate': ['rect', 'circle', 'ellipse', 'path']
+        }
+
+        var transform = implementedTransformations[transformation.type];
+
+        // Return false if we can't transform this element
+        if (!transform || transform.indexOf(this.tag) === -1) { return false; }
+    }
+
+    // Check whether children can be transformed
+    for (var i = 0; i < this.children.length; i++) {
+        if (!this.children[0].canTransform(transformation)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+SVG_Element.prototype.applyTransformation = function(transformation, attributes) {
     // TODO: Improve how this is done. Maybe have separate transformation functions
     if (this.tag === 'path' && this.pathCommands) {
-        return this.transformPath(transformType, transformValues, attributes)
+        return this.transformPath(transformation, attributes)
     }
 
     var x, y, width, height;
@@ -410,15 +471,15 @@ SVG_Element.prototype.applyTransformation = function(transformType, transformVal
         attributes[width] = attributes[width] || 0;
         attributes[height] = attributes[height] || 0;
 
-        if (transformType === 'translate') {
-            attributes[x] += transformValues[0] || 0;
-            attributes[y] += transformValues[1] || 0;
+        if (transformation.type === 'translate') {
+            attributes[x] += transformation.digits[0] || 0;
+            attributes[y] += transformation.digits[1] || 0;
             return attributes;
         }
 
-        if (transformType === 'scale') {
-            var scaleX = transformValues[0];
-            var scaleY = transformValues.length === 2 ? transformValues[1] : transformValues[0];
+        if (transformation.type === 'scale') {
+            var scaleX = transformation.digits[0];
+            var scaleY = transformation.digits.length === 2 ? transformation.digits[1] : transformation.digits[0];
             attributes[x] *= scaleX;
             attributes[y] *= scaleY;
             attributes[width] *= scaleX;
@@ -429,7 +490,7 @@ SVG_Element.prototype.applyTransformation = function(transformType, transformVal
     return false;
 };
 
-SVG_Element.prototype.transformPath = function(transformType, transformValues, attributes) {
+SVG_Element.prototype.transformPath = function(transformation, attributes) {
     var letters = this.pathCommands.letters;
     var values = this.pathCommands.values;
 
@@ -437,10 +498,10 @@ SVG_Element.prototype.transformPath = function(transformType, transformValues, a
     var simpleTranslations = 'MLQTCS';
     var nullTranslations = 'mlhvqtcsZz';
 
-    var dx = transformValues[0] || 0;
-    var dy = transformValues[1] || 0;
+    var dx = transformation.digits[0] || 0;
+    var dy = transformation.digits[1] || 0;
 
-    if (transformType === 'translate') {
+    if (transformation.type === 'translate') {
         for (var i = 0; i < letters.length; i++) {
             var letter = letters[i];
             var value = values[i];
@@ -479,14 +540,17 @@ var SVG_Style_Element = function() {
 
     this.toString = function (options) {
         if ((options.styles === 'CSS' || options.styles === 'optimal') &&  this.data) {
+            options.numElements++;
             return '<style>' + options.newLine + this.data + options.newLine + '</style>';
         } else {
             return '';
         }
     }
 
-    // Empty function to avoid problems
+    // Empty functions to avoid problems
     this.createCSS = function() {};
+    this.parseTransforms = function() {};
+    this.canTransform = function() {};
 };
 
 /************************************************************************
@@ -543,8 +607,9 @@ SVG_Object.prototype.findNamespaces = function() {
 };
 
 SVG_Object.prototype.toString = function() {
-    this.options.newLine = (this.options.whitespace === 'remove') ? "": "\n";
+    this.options.numElements = 0;   // Not really an option, but handy to put here
 
+    this.options.newLine = (this.options.whitespace === 'remove') ? "": "\n";
     this.options.positionDecimals = this.getDecimalOptimiserFunction(this.options.attributeNumTruncate);
     this.options.styleDecimals = this.getDecimalOptimiserFunction(this.options.styleNumTruncate);
     this.options.svgSizeDecimals = this.getDecimalOptimiserFunction(this.options.svgSizeTruncate);
@@ -552,6 +617,9 @@ SVG_Object.prototype.toString = function() {
     if (this.options.styles === 'CSS' || this.options.styles === 'optimal') {
         this.createCSS();
     }
+
+    // Convert transform attributes to array of transforms
+    this.elements.parseTransforms();
 
     return this.elements.toString(this.options);
 };

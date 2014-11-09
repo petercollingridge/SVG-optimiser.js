@@ -38,7 +38,7 @@ function getExampleSVG(filename) {
 }
 
 // Convert string into filesize
-var getFileSize = function(str) {
+function getFileSize(str) {
     var size = str.length / 1000;
     if (size > 1000) {
         return (Math.round(size / 100) / 10) + " MB";
@@ -54,6 +54,17 @@ function addContentsToDiv(contents, selector) {
     if (div.length === 1) {
         div.empty();
         div.append(contents);
+    }
+};
+
+function addSVGStats(selector, filesize, numElements) {
+    var div = $(selector);
+    if (div.length === 1) {
+        div.empty();
+        var ul = $('<ul>');
+        div.append(ul);
+        ul.append($('<li>Filesize: ' + filesize + '</li>'));
+        ul.append($('<li>Elements: ' + numElements + '</li>'));
     }
 };
 
@@ -82,13 +93,10 @@ function loadSVG(id) {
     addContentsToDiv(svgStringNew, '#svg-after .svg-container');
 
     // Add SVG information
-    var filesizeOld = getFileSize(svgStringOld);
-    var filesizeNew = getFileSize(svgStringNew);
-    var numElementslOld = jQuerySVG.find("*").length;
-
     var compression = Math.round(1000 * svgStringNew.length / svgStringOld.length) / 10;
-    addContentsToDiv($("<p>Original filesize: " + filesizeOld + "</p>"), '#svg-before .svg-data-container');
-    addContentsToDiv($("<p>New filesize: " + filesizeNew + " (" + compression + "%)</p>"), '#svg-after .svg-data-container');
+    addSVGStats('#svg-before .svg-data', getFileSize(svgStringOld), jQuerySVG.find("*").length);
+    addSVGStats('#svg-after .svg-data', getFileSize(svgStringNew) + " (" + compression + "%)", svgObj.options.numElements);
+    
 
     // Update interface
     $('#upload-container').hide("fast");
