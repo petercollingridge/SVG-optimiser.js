@@ -426,7 +426,8 @@ SVG_Element.prototype.getPathString = function(options) {
 SVG_Element.prototype.canTransform = function(transformation) {
     if (this.tag !== 'g') {
         var implementedTransformations = {
-            'translate': ['rect', 'circle', 'ellipse', 'path']
+            'translate': ['rect', 'circle', 'ellipse', 'path'],
+            'scale': ['rect', 'circle', 'ellipse', 'path']
         }
 
         var transform = implementedTransformations[transformation.type];
@@ -496,6 +497,7 @@ SVG_Element.prototype.transformPath = function(transformation, attributes) {
     // TODO: move these elsewhere
     var simpleTranslations = 'MLQTCS';
     var nullTranslations = 'mlhvqtcsZz';
+    var implementedScales = 'MmLlqQtTcCsS';
 
     var dx = transformation.digits[0] || 0;
     var dy = transformation.digits[1] || 0;
@@ -527,10 +529,53 @@ SVG_Element.prototype.transformPath = function(transformation, attributes) {
                 return false;
             }
         }
+    } else if (transformation.type === 'scale') {
+        for (var i = 0; i < letters.length; i++) {
 
-        this.pathCommands.values = values;
-        return attributes;
+            var letter = letters[i];
+            var value = values[i];
+
+            if (implementedScales.indexOf(letter) > -1) {
+                for (var j = 0; j < value.length; j += 2) {
+                    value[j] *= dx;
+                    value[j + 1] *= dy;
+                } 
+            } else if (letter === 'H') {
+                for (var j = 0; j < value.length; j++) {
+                    value[j] *= dx;
+                }
+            } else if (letter === 'V') {
+                for (var j = 0; j < value.length; j++) {
+                    value[j] *= dy;
+                }
+            } else if (letter === 'A' || letter === 'a') {
+                // TODO: check that scaling arcs works
+                return false
+                for (var j = 0; j < value.length; j+=7) {
+                    if (dx > 0) {
+                        value[j] *= dx;
+                    } else {
+                        value[j] *= -dx;
+                        value[j + 4] = 1 - value[j + 4];
+                    }
+                    if (dy > 0) {
+                        value[j + 1] *= dy;
+                    } else {
+                        value[j + 1] *= -dy;
+                        value[j + 4] = 1 - value[j + 4];
+                    }
+                    value[j + 5] *= dx;
+                    value[j + 6] *= dy;
+                } 
+            } else {
+                return false;
+            }
+        }
     }
+
+    // Success
+    this.pathCommands.values = values;
+    return attributes;
 };
 
 // Style element contains CSS data
