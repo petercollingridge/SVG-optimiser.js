@@ -490,6 +490,7 @@ SVG_Element.prototype.applyTransformation = function(transformation, attributes)
     return false;
 };
 
+// TODO: move transformations to a separate file
 SVG_Element.prototype.transformPath = function(transformation, attributes) {
     var letters = this.pathCommands.letters;
     var values = this.pathCommands.values;
@@ -549,9 +550,8 @@ SVG_Element.prototype.transformPath = function(transformation, attributes) {
                     value[j] *= dy;
                 }
             } else if (letter === 'A' || letter === 'a') {
-                // TODO: check that scaling arcs works
-                return false
-                for (var j = 0; j < value.length; j+=7) {
+                // TODO: check this works
+                for (var j = 0; j < value.length; j += 7) {
                     if (dx > 0) {
                         value[j] *= dx;
                     } else {

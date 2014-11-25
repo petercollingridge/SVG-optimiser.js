@@ -68,6 +68,36 @@ function addSVGStats(selector, filesize, numElements) {
     }
 };
 
+function optimiseSVG(svgObj) {
+    // Create the new SVG string
+    var svgStringNew = svgObj.toString();
+
+    // Show new SVG image
+    addContentsToDiv(svgStringNew, '#svg-after .svg-container');
+
+    // Show SVG information
+    var compression = Math.round(1000 * svgStringNew.length / svgObj.originalString.length) / 10;
+    addSVGStats('#svg-after .svg-data', getFileSize(svgStringNew) + " (" + compression + "%)", svgObj.options.numElements);
+
+    // Show code of updated SVG
+    $('#output-container').text(svgStringNew);
+};
+
+function addOptions(svgObj) {
+    var container = $('#options-container');
+    container.empty();
+
+    for (var option in svgObj.options) {
+        var checkbox = $('<input type="checkbox" name="' + option + '"/>' + option +'<br/>');
+
+        checkbox.change(function(evt) {
+            svgObj.options[this.name] = !this.checked;
+            optimiseSVG(svgObj);
+        });
+        container.append(checkbox);
+    }
+};
+
 // Get SVG string from textarea with given id
 // Parse as XML and convert to jQuery object
 function loadSVG(id) {
@@ -78,6 +108,7 @@ function loadSVG(id) {
 
     var jQuerySVG = $(svgDoc).children();
     var svgObj = new SVG_Object(jQuerySVG[0]);
+    svgObj.originalString = svgStringOld;
 
     // Output a nicely formatted file
     //svgObj.options.whitespace = 'pretty';
@@ -85,26 +116,18 @@ function loadSVG(id) {
     // Remove ids
     svgObj.options.removeIDs = true;
 
-    // Create the new SVG string
-    var svgStringNew = svgObj.toString();
-
-    // Add SVG images
+    // Add original SVG image
     addContentsToDiv(svgStringOld, '#svg-before .svg-container');
-    addContentsToDiv(svgStringNew, '#svg-after .svg-container');
-
-    // Add SVG information
-    var compression = Math.round(1000 * svgStringNew.length / svgStringOld.length) / 10;
     addSVGStats('#svg-before .svg-data', getFileSize(svgStringOld), jQuerySVG.find("*").length);
-    addSVGStats('#svg-after .svg-data', getFileSize(svgStringNew) + " (" + compression + "%)", svgObj.options.numElements);
-    
+
+    // Add new SVG image
+    optimiseSVG(svgObj)
 
     // Update interface
     $('#upload-container').hide("fast");
+    addOptions(svgObj);
     $('#output-section').show();
     $('#optimise-section').show();
-
-    // Show code of updated SVG
-    $('#output-container').text(svgStringNew);
 };
 
 $(document).ready(function() {

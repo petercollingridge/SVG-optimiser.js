@@ -11,6 +11,12 @@
 	border: 1px solid #888;
 }
 
+#options-container {
+	-webkit-columns: 300px 3;
+    -moz-columns: 300px 3;
+    columns: 300px 3;
+}
+
 #output-container {
 	white-space: pre-wrap;
 	font-family: Fixed, 'Courier New', monospace;
