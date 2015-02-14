@@ -56,7 +56,7 @@ SVG_Element.prototype.parseNumber = function(str) {
 
 // Split a string from a path "d" attribute into a list of letters and values
 SVG_Element.prototype.parsePath = function(dAttr) {
-    var reCommands = /([ACHLMQSTVZ])([-\+\d\.\s,e]*)/gi
+    var reCommands = /([ACHLMQSTVZ])([-\+\d\.\s,e]*)/gi;
     var reDigits = /([-+]?[\d\.]+)([eE][-+]?[\d\.]+)?/g;
     var letters = [];
     var values = [];
@@ -79,7 +79,7 @@ SVG_Element.prototype.parsePath = function(dAttr) {
     }
 
     return { letters: letters, values: values };
-}
+};
 
 // Split a string from a style attribute into a hash of styles
 // e.g. style="fill:#269276;opacity:1" => {fill: '#269276', opacity: '1'}
@@ -101,7 +101,7 @@ SVG_Element.prototype.parseStyle = function(styleString) {
 // Convert transform attribute into an array of [transformation, digits]
 SVG_Element.prototype.parseTransforms = function() {
     var reTransform = /([a-z]+)\s*\(([-\+\d\.\s,e]+)\)/gi;
-    var transform
+    var transform;
     this.transforms = [];
 
     if (this.attributes.transform) {
@@ -183,7 +183,7 @@ SVG_Element.prototype.getUsedAttributes = function(options) {
     for (var i = 0; i < this.transforms.length; i++) {
         // Convert remaining transformations back into a string
         // TODO: truncate decimals and remove if identity transformation
-        var transform = this.transforms[i]
+        var transform = this.transforms[i];
         transformedAttributes.transform += transform.type + "(" + transform.digits.join(" ") + ")";
     }
 
@@ -306,7 +306,7 @@ SVG_Element.prototype.createCSS = function(options, stylesOfElements) {
     for (var i = 0; i < this.children.length; i++) {
         this.children[i].createCSS(options, stylesOfElements);
     }
-}
+};
 
 // Return a string representing the SVG element
 // All the optimisation is done here, so none of the original information is lost
@@ -319,7 +319,7 @@ SVG_Element.prototype.toString = function(options, depth) {
         }
     }
 
-    var depth = depth || 0;
+    depth = depth || 0;
     var indent = (options.whitespace === 'remove') ? '' : new Array(depth + 1).join('  ');
     var str = indent + '<' + this.tag;
 
@@ -359,8 +359,8 @@ SVG_Element.prototype.toString = function(options, depth) {
     // Assume g element has no text (which it shouldn't)
     // TODO: if g contains styles could add styles to children (only if using CSS or there is 1 child)
 
+    var childString = "";
     if (this.tag === 'g' && options.removeCleanGroups && !numUsedAttributes && !usedStyles.length) {
-        var childString = "";
         for (var i = 0; i < this.children.length; i++) {
             childString += this.children[i].toString(options, depth + 1);
         }
@@ -368,7 +368,6 @@ SVG_Element.prototype.toString = function(options, depth) {
     }
 
     // Get child information
-    var childString = "";
     for (var i = 0; i < this.children.length; i++) {
         childString += this.children[i].toString(options, depth + 1);
     }
@@ -428,7 +427,7 @@ SVG_Element.prototype.canTransform = function(transformation) {
         var implementedTransformations = {
             'translate': ['rect', 'circle', 'ellipse', 'path'],
             'scale': ['rect', 'circle', 'ellipse', 'path']
-        }
+        };
 
         var transform = implementedTransformations[transformation.type];
 
@@ -444,12 +443,12 @@ SVG_Element.prototype.canTransform = function(transformation) {
     }
 
     return true;
-}
+};
 
 SVG_Element.prototype.applyTransformation = function(transformation, attributes) {
     // TODO: Improve how this is done. Maybe have separate transformation functions
     if (this.tag === 'path' && this.pathCommands) {
-        return this.transformPath(transformation, attributes)
+        return this.transformPath(transformation, attributes);
     }
 
     var x, y, width, height;
@@ -589,7 +588,7 @@ var SVG_Style_Element = function() {
         } else {
             return '';
         }
-    }
+    };
 
     // Empty functions to avoid problems
     this.createCSS = function() {};
@@ -640,7 +639,7 @@ var SVG_Object = function(jQuerySVG) {
 SVG_Object.prototype.findNamespaces = function() {
     var namespaces = {};
 
-    for (attr in this.elements.attributes) {
+    for (var attr in this.elements.attributes) {
         if (attr.slice(0,6) === 'xmlns:') {
             var ns = attr.split(':')[1];
             namespaces[ns] = (ns === 'svg');
@@ -682,17 +681,17 @@ SVG_Object.prototype.getDecimalOptimiserFunction = function(parameters) {
 
         var roundFunction;
         if (type === 'decimal place') {
-            roundFunction = function(n) { return Math.round(n * scale) / scale; }
+            roundFunction = function(n) { return Math.round(n * scale) / scale; };
         } else if (type === 'significant figure') {
             roundFunction = function(n) {
                 if (n == 0) { return 0; }
                 var mag = Math.pow(10, level - Math.ceil(Math.log(n < 0 ? -n: n) / Math.LN10));
                 return Math.round(n * mag) / mag;
-            }
+            };
         } else if (type === 'order of magnitude') {
-            roundFunction = function(n) { return Math.round(n * scale); }
+            roundFunction = function(n) { return Math.round(n * scale); };
         } else {
-            roundFunction = function(n) { return n; }
+            roundFunction = function(n) { return n; };
         }
 
         return function(str) {
@@ -725,19 +724,19 @@ SVG_Object.prototype.createCSS = function() {
     var counter = 0;
 
     var getClassName = function(n) {
-        var name = ''
+        var name = '';
         var len = letters.length;
         while (n >= 0) {
             name += letters.charAt(n % len);
             n -= len;
         }
         return name;
-    }
+    };
 
     var styleString = '';
 
     for (var styles in this.stylesOfElements) {
-        var elements = this.stylesOfElements[styles]
+        var elements = this.stylesOfElements[styles];
         if (this.options.styles === 'optimal' && elements.length === 1) { continue; }
 
         var styleName = getClassName(counter);
