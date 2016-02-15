@@ -74,7 +74,8 @@ var SVG_optimise = {
 
         while (transform = reTransform.exec(transformString)) {
             digits = transform[2].split(/\s*[,\s]+\s*/);
-            transform = [transform[1]];
+            transform = [transform[1].toLowerCase()];
+
             for (var i = 0; i < digits.length; i++) {
                 digit = parseFloat(digits[i]);
                 if (!isNaN(digit)) {
@@ -85,6 +86,87 @@ var SVG_optimise = {
         }
 
         return transforms;
+    },
+
+    // Return a function that given a number optimises it.
+    // type === 'decimal place': round to a number of decimal places
+    // type === 'significant figure': round to a number of significant figures (needs work)
+    getRoundingFunction: function(type, level) {
+        var roundingFunction;
+        level = parseInt(level, 10);
+
+        if (!isNaN(level)) {
+            var scale = Math.pow(10, level);
+
+            if (type === 'decimal places') {
+                roundingFunction = function(n) { return Math.round(n * scale) / scale; };
+            } else if (type === 'significant figures') {
+                roundingFunction = function(n) {
+                    if (n === 0) { return 0; }
+                    var mag = Math.pow(10, level - Math.ceil(Math.log(n < 0 ? -n: n) / Math.LN10));
+                    return Math.round(n * mag) / mag;
+                };
+            } else {
+                console.warn("No such rounding function, " + type);
+                roundingFunction = function(n) { return n; };
+            }
+
+            return function(n) {
+                if (isNaN(n)) {
+                    return n;
+                } else {
+                    return roundingFunction(n);
+                }
+            };
+
+        } else {
+            // If level not properly defined, return identity function
+            return function(str) { return str; };
+        }
+    },
+
+    translatePath: function(pathCommands, dx, dy) {
+        dx = dx || 0;
+        dy = dy || 0;
+
+        // TODO: move these elsewhere
+        var simpleTranslations = 'MLQTCS';
+        var nullTranslations = 'mlhvqtcsZz';
+
+        var translatedPath = [];
+        var command, commandLetter, translatedCommand, i, j;
+
+        for (i = 0; i < pathCommands.length; i++) {
+            command = pathCommands[i];
+            commandLetter = command[0];
+            translatedCommand = [commandLetter];
+
+            // For simple commands, just add (dx, dy) to each pair of values
+            if (simpleTranslations.indexOf(commandLetter) > -1) {
+                for (j = 1; j < command.length;) {
+                    translatedCommand.push(command[j++] + dx);
+                    translatedCommand.push(command[j++] + dy);
+                }
+            } else if (commandLetter === 'H') {
+                for (j = 1; j < command.length; j++) {
+                    translatedCommand.push(command[j] + dx);
+                }
+            } else if (commandLetter === 'V') {
+                for (j = 1; j < command.length; j++) {
+                    translatedCommand.push(command[j] + dy);
+                }
+            } else if (nullTranslations.indexOf(commandLetter) > -1) {
+                // These commands unaffected by translation
+                translatedPath.push(command.slice());
+                continue;
+            } else {
+                console.warn("Unexpected command: " + commandLetter);
+            }
+
+            translatedPath.push(translatedCommand);
+        }
+
+        return translatedPath;
     },
 
     // Given an array of arrays of the type from by parsePath,
@@ -152,42 +234,5 @@ var SVG_optimise = {
 
         return pathString;
     },
-
-    // Return a function that given a number optimises it.
-    // type === 'decimal place': round to a number of decimal places
-    // type === 'significant figure': round to a number of significant figures (needs work)
-    getRoundingFunction: function(type, level) {
-        var roundingFunction;
-        level = parseInt(level, 10);
-
-        if (!isNaN(level)) {
-            var scale = Math.pow(10, level);
-
-            if (type === 'decimal places') {
-                roundingFunction = function(n) { return Math.round(n * scale) / scale; };
-            } else if (type === 'significant figures') {
-                roundingFunction = function(n) {
-                    if (n === 0) { return 0; }
-                    var mag = Math.pow(10, level - Math.ceil(Math.log(n < 0 ? -n: n) / Math.LN10));
-                    return Math.round(n * mag) / mag;
-                };
-            } else {
-                console.warn("No such rounding function, " + type);
-                roundingFunction = function(n) { return n; };
-            }
-
-            return function(n) {
-                if (isNaN(n)) {
-                    return n;
-                } else {
-                    return roundingFunction(n);
-                }
-            };
-
-        } else {
-            // If level not properly defined, return identity function
-            return function(str) { return str; };
-        }
-    }
 
 };
