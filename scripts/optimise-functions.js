@@ -98,11 +98,16 @@ var SVG_optimise = {
             return [];
         }
 
+        // If a path only consists of m commands (and z) we remove it
+        var onlyMoveCommands = true;
+
         var optimisedPath = [];
         var currentCommand = [];
+
         for (var i = 0; i < pathLength; i++) {
             var command = path[i];
             var commandType = command[0];
+            if (onlyMoveCommands) { onlyMoveCommands = 'mMzZ'.indexOf(commandType) !== -1; }
 
             if (commandType !== currentCommand[0]) {
                 currentCommand = command.slice();
@@ -119,6 +124,9 @@ var SVG_optimise = {
                 }
             }
         }
+
+        // Paths that are only move command can be ignored
+        if (onlyMoveCommands) { return []; }
 
         return optimisedPath;
     },
@@ -143,5 +151,43 @@ var SVG_optimise = {
         }
 
         return pathString;
+    },
+
+    // Return a function that given a number optimises it.
+    // type === 'decimal place': round to a number of decimal places
+    // type === 'significant figure': round to a number of significant figures (needs work)
+    getRoundingFunction: function(type, level) {
+        var roundingFunction;
+        level = parseInt(level, 10);
+
+        if (!isNaN(level)) {
+            var scale = Math.pow(10, level);
+
+            if (type === 'decimal places') {
+                roundingFunction = function(n) { return Math.round(n * scale) / scale; };
+            } else if (type === 'significant figures') {
+                roundingFunction = function(n) {
+                    if (n === 0) { return 0; }
+                    var mag = Math.pow(10, level - Math.ceil(Math.log(n < 0 ? -n: n) / Math.LN10));
+                    return Math.round(n * mag) / mag;
+                };
+            } else {
+                console.warn("No such rounding function, " + type);
+                roundingFunction = function(n) { return n; };
+            }
+
+            return function(n) {
+                if (isNaN(n)) {
+                    return n;
+                } else {
+                    return roundingFunction(n);
+                }
+            };
+
+        } else {
+            // If level not properly defined, return identity function
+            return function(str) { return str; };
+        }
     }
+
 };
