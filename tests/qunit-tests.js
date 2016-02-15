@@ -57,6 +57,7 @@ QUnit.test("optimisePath", function(assert) {
 
 	assert.deepEqual(SVG_optimise.optimisePath([], options), [], "Empty array");
 	assert.deepEqual(SVG_optimise.optimisePath([[]], options), [], "Array with empty array");
+	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['M', 12, -5.5], ['z']], options), [], "Remove empty path");
 	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21]], options), [['M', 5, 10], ['L', 12, 21]], "Two commands");
 	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21], ['z']], options), [['M', 5, 10], ['L', 12, 21], ['z']], "Include z command");
 	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21], ['L', 18, 12]], options), [['M', 5, 10], ['L', 12, 21, 18, 12]], "Combine repeated commands");
@@ -75,4 +76,30 @@ QUnit.test("getPathString", function(assert) {
 	assert.equal(SVG_optimise.getPathString([['M', 5, 10], ['a', 150, 254, 0, 0, 0, 15, 150]], options), "M5 10a150 254 0 0 0 15 150", "Arc command");
 	assert.equal(SVG_optimise.getPathString([['M', 5, 10], ['L', 12, 21], ['z']], options), "M5 10L12 21z", "Include z command");
 	assert.equal(SVG_optimise.getPathString([['M', -5, 10], ['L', 12, -21]], options), "M-5 10L12-21", "Commands with negatives");
+});
+
+QUnit.test("getRoundingFunction", function(assert) {
+	var roundingFunction;
+
+	roundingFunction = SVG_optimise.getRoundingFunction('decimal places', 0);
+	assert.equal(roundingFunction("5"), "5", "Zero decimal places: Not a number");
+	assert.equal(roundingFunction(5), 5, "Zero decimal places: Integer");
+	assert.equal(roundingFunction(5.0), 5, "Zero decimal places: Decimal with zero");
+	assert.equal(roundingFunction(5.09), 5, "Zero decimal places: Decimal");
+	assert.equal(roundingFunction(5.4), 5, "Zero decimal places: Round down");
+	assert.equal(roundingFunction(5.6), 6, "Zero decimal places: Round up");
+	assert.equal(roundingFunction(-5.4), -5, "Zero decimal places: Negative round down");
+	assert.equal(roundingFunction(-5.6), -6, "Zero decimal places: Positive round up");
+
+	roundingFunction = SVG_optimise.getRoundingFunction('decimal places', 2);
+	assert.equal(roundingFunction("5"), "5", "Zero decimal places: Not a number");
+	assert.equal(roundingFunction(5), 5, "Zero decimal places: Integer");
+	assert.equal(roundingFunction(5.0), 5, "Zero decimal places: Decimal with zero");
+	assert.equal(roundingFunction(5.09), 5.09, "Zero decimal places: Decimal");
+	assert.equal(roundingFunction(5.004), 5, "Zero decimal places: Round down");
+	assert.equal(roundingFunction(5.006), 5.01, "Zero decimal places: Round up");
+	assert.equal(roundingFunction(-5.004), -5, "Zero decimal places: Negative round down");
+	assert.equal(roundingFunction(-5.006), -5.01, "Zero decimal places: Positive round up");
+	assert.equal(roundingFunction(5.095), 5.1, "Zero decimal places: Round twice");
+	assert.equal(roundingFunction(5.995), 6, "Zero decimal places: Round three times");
 });
