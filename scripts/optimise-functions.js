@@ -251,9 +251,49 @@ var SVG_optimise = {
 
 };
 
+
+// Node in an SVG document
+var SVG_Element = function(element, parent) {
+    this.tag = element.nodeName;
+    this.attributes = {};
+    this.styles = {};
+    this.parent = parent;
+    this.children = [];
+    this.text = "";
+
+    // Add attributes to hash
+    var i, attributes = element.attributes;
+    if (element.attributes) {
+        for (i = 0; i < attributes.length; i++){
+            var attr = attributes.item(i);
+            var attrName = attr.nodeName;
+            this.attributes[attrName] = attr.value;
+        }
+    }
+
+    // Add children
+    for (i = 0; i < element.childNodes.length; i++) {
+        var child = element.childNodes[i];
+        if (child instanceof Text) {
+            // Tag contains text
+            if (child.data.replace(/^\s*/, "") !== "") {
+                this.text = child.data;
+            }
+        } else {
+            this.children.push(new SVG_Element(child, this));
+        }
+    }
+};
+
+
+// Base object containing the SVG elements
+var SVG_Root = function(svgString) {
+    var jQuerySVG = SVG_optimise.svgToJQueryObject(svgString);
+
+    this.elements = new SVG_Element(jQuerySVG, null);
+};
+
 var testSVG = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><path class="black-line" transform="translate(-5, -15)" d="M10 20 L20 30 L30 20 z"/></svg>';
-var obj = SVG_optimise.svgToJQueryObject(testSVG);
-var element = $(obj).children()[0];
+var element = new SVG_Root(testSVG);
 console.log(element);
-console.log(element.attributes.d);
-console.log(element.attributes.d.nodeValue);
+console.log(element.elements);
