@@ -1,4 +1,13 @@
 var SVG_optimise = {
+    svgToJQueryObject: function(svgString) {
+        // Replace any leading whitespace which will mess up XML parsing
+        svgString =  svgString.replace(/^[\s\n]*/, "");
+
+        // Parse SVG as XML
+        var svgDoc = $.parseXML(svgString);
+        return $(svgDoc).children()[0];
+    },
+
     // Parse digit string to digit, keeping any final units
     // e.g. "str" -> 'str'
     // e.g. "3.4" -> { number: 3.4 }
@@ -155,12 +164,17 @@ var SVG_optimise = {
                 for (j = 1; j < command.length; j++) {
                     translatedCommand.push(command[j] + dy);
                 }
+            } else if (commandLetter === 'A') {
+                for (j = 1; j < command.length; j += 7) {
+                    translatedCommand.push(command[j + 5] + dx);
+                    translatedCommand.push(command[j + 6] + dy);
+                }
             } else if (nullTranslations.indexOf(commandLetter) > -1) {
-                // These commands unaffected by translation
+                // Commands unaffected by translation, so add a copy of the whole thing
                 translatedPath.push(command.slice());
                 continue;
             } else {
-                console.warn("Unexpected command: " + commandLetter);
+                console.warn("Unexpected letter in path: " + commandLetter);
             }
 
             translatedPath.push(translatedCommand);
@@ -236,3 +250,10 @@ var SVG_optimise = {
     },
 
 };
+
+var testSVG = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><path class="black-line" transform="translate(-5, -15)" d="M10 20 L20 30 L30 20 z"/></svg>';
+var obj = SVG_optimise.svgToJQueryObject(testSVG);
+var element = $(obj).children()[0];
+console.log(element);
+console.log(element.attributes.d);
+console.log(element.attributes.d.nodeValue);
