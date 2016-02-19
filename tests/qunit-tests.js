@@ -1,4 +1,6 @@
 
+// optimiser-function.js unit tests
+
 QUnit.test("parseNumber", function(assert) {
 	assert.deepEqual(SVG_optimise.parseNumber(""), "", "Empty string");
 	assert.deepEqual(SVG_optimise.parseNumber("0"), { number: 0 }, "Zero");
@@ -117,4 +119,15 @@ QUnit.test("getPathString", function(assert) {
 	assert.equal(SVG_optimise.getPathString([['M', -5, 10], ['L', 12, -21]], options), "M-5 10L12-21", "Commands with negatives");
 });
 
+// Test elements are optimised as expected
+QUnit.test("Optimise a path element", function(assert) {
+	var tests = [
+		['Remove empty path', '<path/>', ''],
+		['Remove repeated command', '<path d="M10 20 L20 30 L30 20 z"/>', '<path d="M10 20L20 30 30 20z"/>'],
+	];
 
+	for (var i = 0; i < tests.length; i++) {
+		var obj = new SVG_Root(tests[i][1]);
+		assert.equal(obj.write(), tests[i][2], tests[i][0]);
+	}
+});
