@@ -29,7 +29,7 @@ var SVG_Element = function(element) {
                 this.text = child.data;
             }
         } else {
-            this.addChild(child);
+            this.children.push(this.getChild(child));
         }
     }
 };
@@ -40,6 +40,18 @@ SVG_Element.prototype.write = function(options, depth) {
 
     // Open tag
     var str = indent + '<' + this.tag;
+
+    this.optimise(options);
+
+    // If shape element lacks some dimension then don't draw it
+    var essentialAttributes = SVG_optimise.essentialAttributes[this.tag];
+    if (options.removeRedundantShapes && essentialAttributes) {
+        for (var i = 0; i < essentialAttributes.length; i++) {
+            if (!this.attributes[essentialAttributes[i]]) {
+                return "";
+            }
+        }
+    }
 
     // Write attributes
     for (var attr in this.attributes) {
@@ -81,17 +93,19 @@ SVG_Path_Element.prototype = Object.create(SVG_Element.prototype);
 SVG_Element.prototype.optimise = function(options) {
     // Replace current d attributed with optimised version
     // TODO: don't replace by write elsewhere
-    var optimisedPath = SVG_optimise.optimisePath(this.path, options);
-    this.attributes.d = SVG_optimise.getPathString(optimisedPath, options);
+    if (this.path) {
+        var optimisedPath = SVG_optimise.optimisePath(this.path, options);
+        this.attributes.d = SVG_optimise.getPathString(optimisedPath, options);
+    }
 };
 
 
 // Create the child element of an given element with the correct Objects
-SVG_Element.prototype.addChild = function(child) {
+SVG_Element.prototype.getChild = function(child) {
     if (child.nodeName === 'path') {
-        this.children.push(new SVG_Path_Element(child));
+        return new SVG_Path_Element(child);
     } else {
-        this.children.push(new SVG_Element(child));
+        return new SVG_Element(child);
     }
 };
 
@@ -101,10 +115,11 @@ SVG_Element.prototype.addChild = function(child) {
 var SVG_Root = function(svgString) {
     var jQuerySVG = SVG_optimise.svgToJQueryObject(svgString);
 
-    this.elements = new SVG_Element(jQuerySVG, null);
+    this.elements = SVG_Element.prototype.getChild(jQuerySVG);
     this.options = {
         whitespace: 'remove',
-        positionDecimals: SVG_optimise.getRoundingFunction('decimal places', 1)
+        positionDecimals: SVG_optimise.getRoundingFunction('decimal places', 1),
+        removeRedundantShapes: true
     };
 };
 
@@ -114,6 +129,3 @@ SVG_Root.prototype.write = function() {
     return this.elements.write(this.options);
 };
 
-var testSVGString = '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 10 10"><path class="black-line" transform="translate(-5, -15)" d="M10 20 L20 30 L30 20 z"/></svg>';
-var testSVG = new SVG_Root(testSVGString);
-console.log(testSVG.write());
