@@ -122,7 +122,17 @@ QUnit.test("getPathString", function(assert) {
 // Test elements are optimised as expected
 QUnit.test("Optimise a path element", function(assert) {
 	var tests = [
+		// Paths to remove
 		['Remove empty path', '<path/>', ''],
+		['Remove path with one M command', '<path d="M10 20"/>', ''],
+		['Remove path with Mz command', '<path d="M10 20z"/>', ''],
+		['Remove path with just M commands', '<path d="M10 20 M 30 40"/>', ''],
+
+		// Paths to remove exception
+		["Don't remove paths with M commands and multiple parameters", '<path d="M10 20 30 40 10 40z"/>', '<path d="M10 20 30 40 10 40z"/>'],
+
+		// Repeated commands
+		["Ignore M command followed by a second M command", '<path d="M0 0 M 5 5 M10 20 30 40 10 40z"/>', '<path d="M10 20 30 40 10 40z"/>'],
 		['Remove repeated command', '<path d="M10 20 L20 30 L30 20 z"/>', '<path d="M10 20L20 30 30 20z"/>'],
 	];
 

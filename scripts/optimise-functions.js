@@ -213,13 +213,30 @@ var SVG_optimise = {
         for (var i = 0; i < pathLength; i++) {
             var command = path[i];
             var commandType = command[0];
-            if (onlyMoveCommands) { onlyMoveCommands = 'mMzZ'.indexOf(commandType) !== -1; }
+            var lowerCaseLetter = commandType.toLowerCase();    // For easier checking
+
+            // Test whether paths contain only MmZz commands so we can remove them
+            // Don't remove paths of the form Mx1 y1 x2 y2, since these draw a line
+            if (onlyMoveCommands) {
+                if (lowerCaseLetter !== 'z') {
+                    if (lowerCaseLetter !== 'm') {
+                        onlyMoveCommands = false;
+                    } else {
+                        onlyMoveCommands = command.length < 5;
+                    }
+                }
+            }
 
             if (commandType !== currentCommand[0]) {
                 currentCommand = command.slice();
                 optimisedPath.push(currentCommand);
+            } else if (lowerCaseLetter === 'm') {
+                // With multiple m commands, replace old comand with the new one.
+                // TODO: Need to take into account if commands are relative
+                currentCommand = command.slice();
+                optimisedPath[optimisedPath.length - 1] = currentCommand;
             } else {
-                // Combine paths commands when they are the same
+                // Combine path commands when they are the same (and not M or m)
                 Array.prototype.push.apply(currentCommand, command.slice(1));
             }
 
