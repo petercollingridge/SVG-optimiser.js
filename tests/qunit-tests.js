@@ -120,7 +120,7 @@ QUnit.test("getPathString", function(assert) {
 });
 
 // Test elements are optimised as expected
-QUnit.test("Optimise a path element", function(assert) {
+QUnit.test("Optimise path elements", function(assert) {
 	var tests = [
 		// Paths to remove
 		['Remove empty path', '<path/>', ''],
@@ -130,6 +130,11 @@ QUnit.test("Optimise a path element", function(assert) {
 
 		// Paths to remove exception
 		["Don't remove paths with M commands and multiple parameters", '<path d="M10 20 30 40 10 40z"/>', '<path d="M10 20 30 40 10 40z"/>'],
+
+		// Work with paths that use every command
+		["Handle multipath",
+		'<path d="M10 40 A42 24 0 1 1 90 40 C80,50 70,30 60,40 S50,50, 40,40 20,50, 10,40 M86  50 Q74 40 62 50T38 50 14 50 L30 90 H45 V80 L55,80 55,90 70,90z"/>',
+		'<path d="M10 40A42 24 0 1 1 90 40C80 50 70 30 60 40S50 50 40 40 20 50 10 40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80L55 80 55 90 70 90z"/>'],
 
 		// Repeated commands
 		["Ignore M command followed by a second M command", '<path d="M0 0 M 5 5 M10 20 30 40 10 40z"/>', '<path d="M10 20 30 40 10 40z"/>'],
