@@ -81,17 +81,24 @@ QUnit.test("getRoundingFunction", function(assert) {
 	assert.equal(roundingFunction(5.995), 6, "Zero decimal places: Round three times");
 });
 
-QUnit.test("translatePath", function(assert) {
+QUnit.test("transformPath.translate", function(assert) {
 	var transformFunction = SVG_optimise.transformPath.translate;
 	assert.deepEqual(transformFunction(
 		[['M', 10, 20], ['L', 32.1, -4.3]], [5, 8]),
-		[['M', 15, 28], ['L', 37.1, 3.7]], "ML path");
+		[['M', 15, 28], ['L', 37.1, 3.7]], "Absolute ML path");
+	assert.deepEqual(transformFunction(
+		[['m', 10, 20], ['l', 32.1, -4.3]], [5, 8]),
+		[['m', 15, 28], ['l', 32.1, -4.3]], "Start with relative m");
+	assert.deepEqual(transformFunction(
+		[['m', 10, 20, 32.1, -4.3]], [5, 8]),
+		[['m', 15, 28, 32.1, -4.3]], "Path using all relative ms");
 	assert.deepEqual(transformFunction(
 		[['M', 10, 20], ['H', 32.1], ['V', -40.0], ['z']], [5.4, -8]),
 		[['M', 15.4, 12], ['H', 37.5], ['V', -48], ['z']], "VHz path");
 	assert.deepEqual(transformFunction(
 		[['M', 10, 20], ['L', 32.1, -4.3], ['l', 32.1, -40.0], ['z']], [5.4, -8]),
 		[['M', 15.4, 12], ['L', 37.5, -12.3], ['l', 32.1, -40.0], ['z']], "Mixed absolute and relative paths");
+	// TODO: add multipath
 });
 
 QUnit.test("optimisePath", function(assert) {
