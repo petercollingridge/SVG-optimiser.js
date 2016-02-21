@@ -21,6 +21,11 @@ var SVG_Element = function(element) {
         }
     }
 
+    // Parse attributes
+    if (this.attributes.transform) {
+        this.transform = SVG_optimise.parseTransforms(this.attributes.transform);
+    }
+
     for (i = 0; i < element.childNodes.length; i++) {
         var child = element.childNodes[i];
         if (child instanceof Text) {
@@ -80,6 +85,7 @@ SVG_Element.prototype.optimise = function(options) {
 };
 
 
+// https://www.w3.org/TR/SVG/paths.html
 var SVG_Path_Element = function(element) {
     SVG_Element.call(this, element);
 
@@ -92,9 +98,21 @@ SVG_Path_Element.prototype = Object.create(SVG_Element.prototype);
 
 SVG_Element.prototype.optimise = function(options) {
     // Replace current d attributed with optimised version
-    // TODO: don't replace by write elsewhere
+    // TODO: don't replace attribute but write a new one instead
     if (this.path) {
-        var optimisedPath = SVG_optimise.optimisePath(this.path, options);
+        var optimisedPath = this.path;
+        if (this.transform) {
+            // TODO: create a generic function for applying transforms to any element type
+            for (var i = 0; i < this.transform.length; i++) {
+                var transform = this.transform[i];
+                var transformFunction = SVG_optimise.transformPath[transform[0]];
+                if (transformFunction) {
+                    optimisedPath = transformFunction(optimisedPath, transform.slice(1));
+                    // TOOD: If successful need to remove the transformation from the attribute hash
+                }
+            }
+        }
+        optimisedPath = SVG_optimise.optimisePath(optimisedPath, options);
         this.attributes.d = SVG_optimise.getPathString(optimisedPath, options);
     }
 };
@@ -113,7 +131,12 @@ SVG_Element.prototype.getChild = function(child) {
 // Base object containing the SVG elements
 // Also where the optimisation options are stored
 var SVG_Root = function(svgString) {
-    var jQuerySVG = SVG_optimise.svgToJQueryObject(svgString);
+    var jQuerySVG = svgString;
+
+    // If passed a string, convert to JQuery object other assume we already have a JQuery object
+    if (typeof svgString === 'string') {
+       jQuerySVG = SVG_optimise.svgToJQueryObject(svgString);
+    }
 
     this.elements = SVG_Element.prototype.getChild(jQuerySVG);
     this.options = {

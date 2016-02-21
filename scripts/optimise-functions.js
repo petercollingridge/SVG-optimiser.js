@@ -144,53 +144,56 @@ var SVG_optimise = {
         }
     },
 
-    translatePath: function(pathCommands, dx, dy) {
-        dx = dx || 0;
-        dy = dy || 0;
+    transformPath: {
+        translate: function(pathCommands, parameters) {
+            var dx = parameters[0] || 0;
+            var dy = parameters[1] || 0;
 
-        // TODO: move these elsewhere
-        var simpleTranslations = 'MLQTCS';
-        var nullTranslations = 'mlhvqtcsZz';
+            // TODO: move these elsewhere
+            var simpleTranslations = 'MLQTCS';
+            var nullTranslations = 'mlhvqtcsZz';
 
-        var translatedPath = [];
-        var command, commandLetter, translatedCommand, i, j;
+            var translatedPath = [];
+            var command, commandLetter, translatedCommand, i, j;
 
-        for (i = 0; i < pathCommands.length; i++) {
-            command = pathCommands[i];
-            commandLetter = command[0];
-            translatedCommand = [commandLetter];
+            for (i = 0; i < pathCommands.length; i++) {
+                command = pathCommands[i];
+                commandLetter = command[0];
+                translatedCommand = [commandLetter];
 
-            // For simple commands, just add (dx, dy) to each pair of values
-            if (simpleTranslations.indexOf(commandLetter) > -1) {
-                for (j = 1; j < command.length;) {
-                    translatedCommand.push(command[j++] + dx);
-                    translatedCommand.push(command[j++] + dy);
+                // For simple commands, just add (dx, dy) to each pair of values
+                if (simpleTranslations.indexOf(commandLetter) > -1) {
+                    for (j = 1; j < command.length;) {
+                        translatedCommand.push(command[j++] + dx);
+                        translatedCommand.push(command[j++] + dy);
+                    }
+                } else if (commandLetter === 'H') {
+                    for (j = 1; j < command.length; j++) {
+                        translatedCommand.push(command[j] + dx);
+                    }
+                } else if (commandLetter === 'V') {
+                    for (j = 1; j < command.length; j++) {
+                        translatedCommand.push(command[j] + dy);
+                    }
+                } else if (commandLetter === 'A') {
+                    for (j = 1; j < command.length; j += 7) {
+                        translatedCommand.push(command[j + 5] + dx);
+                        translatedCommand.push(command[j + 6] + dy);
+                    }
+                } else if (nullTranslations.indexOf(commandLetter) > -1) {
+                    // Commands unaffected by translation, so add a copy of the whole thing
+                    translatedPath.push(command.slice());
+                    continue;
+                } else {
+                    console.warn("Unexpected letter in path: " + commandLetter);
                 }
-            } else if (commandLetter === 'H') {
-                for (j = 1; j < command.length; j++) {
-                    translatedCommand.push(command[j] + dx);
-                }
-            } else if (commandLetter === 'V') {
-                for (j = 1; j < command.length; j++) {
-                    translatedCommand.push(command[j] + dy);
-                }
-            } else if (commandLetter === 'A') {
-                for (j = 1; j < command.length; j += 7) {
-                    translatedCommand.push(command[j + 5] + dx);
-                    translatedCommand.push(command[j + 6] + dy);
-                }
-            } else if (nullTranslations.indexOf(commandLetter) > -1) {
-                // Commands unaffected by translation, so add a copy of the whole thing
-                translatedPath.push(command.slice());
-                continue;
-            } else {
-                console.warn("Unexpected letter in path: " + commandLetter);
+
+                translatedPath.push(translatedCommand);
             }
 
-            translatedPath.push(translatedCommand);
-        }
+            return translatedPath;
+        },
 
-        return translatedPath;
     },
 
     // Given an array of arrays of the type from by parsePath,

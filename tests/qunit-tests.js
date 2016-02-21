@@ -82,14 +82,15 @@ QUnit.test("getRoundingFunction", function(assert) {
 });
 
 QUnit.test("translatePath", function(assert) {
-	assert.deepEqual(SVG_optimise.translatePath(
-		[['M', 10, 20], ['L', 32.1, -4.3]], 5, 8),
+	var transformFunction = SVG_optimise.transformPath.translate;
+	assert.deepEqual(transformFunction(
+		[['M', 10, 20], ['L', 32.1, -4.3]], [5, 8]),
 		[['M', 15, 28], ['L', 37.1, 3.7]], "ML path");
-	assert.deepEqual(SVG_optimise.translatePath(
-		[['M', 10, 20], ['H', 32.1], ['V', -40.0], ['z']], 5.4, -8),
+	assert.deepEqual(transformFunction(
+		[['M', 10, 20], ['H', 32.1], ['V', -40.0], ['z']], [5.4, -8]),
 		[['M', 15.4, 12], ['H', 37.5], ['V', -48], ['z']], "VHz path");
-	assert.deepEqual(SVG_optimise.translatePath(
-		[['M', 10, 20], ['L', 32.1, -4.3], ['l', 32.1, -40.0], ['z']], 5.4, -8),
+	assert.deepEqual(transformFunction(
+		[['M', 10, 20], ['L', 32.1, -4.3], ['l', 32.1, -40.0], ['z']], [5.4, -8]),
 		[['M', 15.4, 12], ['L', 37.5, -12.3], ['l', 32.1, -40.0], ['z']], "Mixed absolute and relative paths");
 });
 
