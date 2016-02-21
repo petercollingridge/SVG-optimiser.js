@@ -159,32 +159,34 @@ var SVG_optimise = {
             for (i = 0; i < pathCommands.length; i++) {
                 command = pathCommands[i];
                 commandLetter = command[0];
-                translatedCommand = [commandLetter];
+                translatedCommand = command.slice();
 
                 // For simple commands, just add (dx, dy) to each pair of values
                 if (simpleTranslations.indexOf(commandLetter) > -1) {
                     for (j = 1; j < command.length;) {
-                        translatedCommand.push(command[j++] + dx);
-                        translatedCommand.push(command[j++] + dy);
+                        translatedCommand[j++] += dx;
+                        translatedCommand[j++] += dy;
                     }
                 } else if (commandLetter === 'H') {
+                    // Should only ever be one command if we have optimised
                     for (j = 1; j < command.length; j++) {
-                        translatedCommand.push(command[j] + dx);
+                        translatedCommand[j] += dx;
                     }
                 } else if (commandLetter === 'V') {
+                    // Should only ever be one command if we have optimised
                     for (j = 1; j < command.length; j++) {
-                        translatedCommand.push(command[j] + dy);
+                        translatedCommand[j] += dy;
                     }
                 } else if (commandLetter === 'A') {
                     for (j = 1; j < command.length; j += 7) {
-                        translatedCommand.push(command[j + 5] + dx);
-                        translatedCommand.push(command[j + 6] + dy);
+                        translatedCommand[j + 5] += dx;
+                        translatedCommand[j + 6] += dy;
                     }
-                } else if (nullTranslations.indexOf(commandLetter) > -1) {
-                    // Commands unaffected by translation, so add a copy of the whole thing
-                    translatedPath.push(command.slice());
-                    continue;
-                } else {
+                } else if (i === 0 && commandLetter === 'm') {
+                    // Paths starting with a relative m should be treated as an absolute M
+                    translatedCommand[1] += dx;
+                    translatedCommand[2] += dy;
+                } else if (nullTranslations.indexOf(commandLetter) === -1){
                     console.warn("Unexpected letter in path: " + commandLetter);
                 }
 
