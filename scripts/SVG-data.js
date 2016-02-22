@@ -32,7 +32,6 @@ var defaultStyles = {
     'font-stretch': 'normal',
     'font-variant': 'normal',
     'text-anchor': 'start',
-    'text-anchor': 'start',
     'writing-mode': 'lr-tb',
     'pointer-events': 'visiblePainted'
 };
