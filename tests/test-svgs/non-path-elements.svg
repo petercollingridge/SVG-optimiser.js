@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+	<desc>SVG with a path contain each of the possible path commands.</desc>
+	<style>*{stroke:black;fill:none}</style>
+
+	<rect x="20" y="4" width="60" height="10"/>
+	<circle cx="36" cy="36.5" r="10"/>
+	<ellipse cx="64" cy="36.5" rx="10" ry="15"/>
+	<line x1="48" y1="50" x2="55" y2="65"/>
+	<polygon points="20,14 5,50, 30,90, 70,90, 95,50, 80,14"/>
+	<polyline points="30,70 40,80 60,80 70,70"/>
+
+</svg>
