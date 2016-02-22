@@ -81,8 +81,27 @@ QUnit.test("getRoundingFunction", function(assert) {
 	assert.equal(roundingFunction(5.995), 6, "Zero decimal places: Round three times");
 });
 
+QUnit.test("transformShape.translate", function(assert) {
+	var transformFunction = SVG_optimise.transformShape.translate;
+	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, []), { x: 10, y: 20}, 'Null translate rect');
+	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, [12, 7]), { x: 22, y: 27}, 'Translate rect in 2D');
+	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, [-2.2, 0.5]), { x: 7.8, y: 20.5}, 'Translate rect in 2D with negative and decimal');
+	assert.deepEqual(transformFunction('rect', { }, [12, 7]), { x: 12, y: 7}, 'Translate rect with missing attributes');
+	assert.deepEqual(transformFunction('circle', { cx: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5}, 'Translate circle in 2D');
+	assert.deepEqual(transformFunction('circle', { x: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: -2.2, cy: 20.5}, 'Translate circle with cx replaced by x');
+});
+
 QUnit.test("transformPath.translate", function(assert) {
 	var transformFunction = SVG_optimise.transformPath.translate;
+	assert.deepEqual(transformFunction(
+		[['M', 10, 20], ['L', 32.1, -4.3]], []),
+		[['M', 10, 20], ['L', 32.1, -4.3]], "Null translate");
+	assert.deepEqual(transformFunction(
+		[['M', 10, 20], ['L', 32.1, -4.3]], [0, 0]),
+		[['M', 10, 20], ['L', 32.1, -4.3]], "Translate by (0, 0)");
+	assert.deepEqual(transformFunction(
+		[['M', 10, 20], ['L', 32.1, -4.3]], [5.5]),
+		[['M', 15.5, 20], ['L', 37.6, -4.3]], "Single value");
 	assert.deepEqual(transformFunction(
 		[['M', 10, 20], ['L', 32.1, -4.3]], [5, 8]),
 		[['M', 15, 28], ['L', 37.1, 3.7]], "Absolute ML path");

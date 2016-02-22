@@ -144,6 +144,31 @@ var SVG_optimise = {
         }
     },
 
+    // Apply transform to elements, rect, circle, ellipse, line
+    transformShape: {
+        translate: function(tag, attributes, parameters) {
+            var dx = parameters[0] || 0;
+            var dy = parameters[1] || 0;
+            var x, y;
+
+            if (tag === 'rect') {
+                x = 'x';
+                y = 'y';
+            } else if (tag === 'circle' || tag === 'ellipse') {
+                x = 'cx';
+                y = 'cy';
+            }
+
+            var newAttributes = {};
+            if (x) {
+                newAttributes[x] = (attributes[x] || 0) + dx;
+                newAttributes[y] = (attributes[y] || 0) + dy;
+            }
+
+            return newAttributes;
+        }
+    },
+
     transformPath: {
         translate: function(pathCommands, parameters) {
             var dx = parameters[0] || 0;
@@ -195,7 +220,6 @@ var SVG_optimise = {
 
             return translatedPath;
         },
-
     },
 
     // Given an array of arrays of the type from by parsePath,

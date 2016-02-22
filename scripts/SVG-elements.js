@@ -52,6 +52,7 @@ SVG_Element.prototype.write = function(options, depth) {
     this.optimise(options);
 
     // If shape element lacks some dimension then don't draw it
+    // TODO: move this into the optimise function
     var essentialAttributes = SVG_optimise.essentialAttributes[this.tag];
     if (options.removeRedundantShapes && essentialAttributes) {
         for (var i = 0; i < essentialAttributes.length; i++) {
