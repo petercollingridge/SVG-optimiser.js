@@ -92,6 +92,20 @@ SVG_Element.prototype.optimise = function(options) {
     }
 };
 
+SVG_Element.prototype.applyTransformation = function(coordinates, options) {
+    for (var i = 0; i < this.transform.length; i++) {
+        var transform = this.transform[i];
+        var transformFunction = this[transform[0]];
+        if (transformFunction) {
+            coordinates = transformFunction(coordinates, transform.slice(1));
+            // Remove transformation from the attribute hash
+            // TOOD: Check there are no other transformations in the attribute
+            delete this.attributes.transform;
+        }
+    }
+    return coordinates;
+};
+
 SVG_Element.prototype.createSVGObject = function() {
     var element = document.createElementNS(this.namespaceURI, this.tag);
 
@@ -112,6 +126,7 @@ SVG_Element.prototype.createSVGObject = function() {
 };
 
 
+// Path element
 // https://www.w3.org/TR/SVG/paths.html
 var SVG_Path_Element = function(element) {
     SVG_Element.call(this, element);
@@ -127,19 +142,11 @@ SVG_Path_Element.prototype.optimise = function(options) {
     // Replace current d attributed with optimised version
     if (this.path) {
         var optimisedPath = this.path;
+
         if (this.transform) {
-            // TODO: create a generic function for applying transforms to any element type
-            for (var i = 0; i < this.transform.length; i++) {
-                var transform = this.transform[i];
-                var transformFunction = SVG_optimise.transformPath[transform[0]];
-                if (transformFunction) {
-                    optimisedPath = transformFunction(optimisedPath, transform.slice(1));
-                    // Remove transformation from the attribute hash
-                    // TOOD: Check there are no other transformations in the attribute
-                    delete this.attributes.transform;
-                }
-            }
+            this.applyTransformation(optimisedPath, options);
         }
+
         optimisedPath = SVG_optimise.optimisePath(optimisedPath, options);
         // TODO: don't replace attribute but write a new one instead
         this.attributes.d = SVG_optimise.getPathString(optimisedPath, options);
@@ -150,6 +157,27 @@ SVG_Path_Element.prototype.optimise = function(options) {
     }
 };
 
+SVG_Path_Element.translate = function(coordinates, parameters) {
+    return SVG_optimise.transformPath.translate(coordinates, parameters);
+};
+
+
+// Rect element
+// https://www.w3.org/TR/SVG/shapes.html#RectElement
+var SVG_Rect_Element = function(element) {
+    SVG_Element.call(this, element);
+
+    this.attributes.x = parseFloat(this.attributes.x || 0);
+    this.attributes.y = parseFloat(this.attributes.y || 0);
+    this.attributes.width = parseFloat(this.attributes.width || 0);
+    this.attributes.height = parseFloat(this.attributes.height || 0);
+};
+SVG_Rect_Element.prototype = Object.create(SVG_Element.prototype);
+
+SVG_Rect_Element.translate = function(parameters) {
+    var attributes = SVG_optimise.transformShape.translate('rect', this.attributes, parameters);
+    $.extend(this.attributes, attributes);
+};
 
 // Create the child element of an given element with the correct Objects
 SVG_Element.prototype.getChild = function(child) {
