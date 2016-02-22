@@ -149,20 +149,29 @@ var SVG_optimise = {
         translate: function(tag, attributes, parameters) {
             var dx = parameters[0] || 0;
             var dy = parameters[1] || 0;
-            var x, y;
+            var newAttributes = {};
 
             if (tag === 'rect') {
-                x = 'x';
-                y = 'y';
+                newAttributes.x = (attributes.x || 0) + dx;
+                newAttributes.y = (attributes.y || 0) + dy;
             } else if (tag === 'circle' || tag === 'ellipse') {
-                x = 'cx';
-                y = 'cy';
-            }
-
-            var newAttributes = {};
-            if (x) {
-                newAttributes[x] = (attributes[x] || 0) + dx;
-                newAttributes[y] = (attributes[y] || 0) + dy;
+                newAttributes.cx = (attributes.cx || 0) + dx;
+                newAttributes.cy = (attributes.cy || 0) + dy;
+            } else if (tag === 'line') {
+                newAttributes.x1 = (attributes.x1 || 0) + dx;
+                newAttributes.x2 = (attributes.x2 || 0) + dx;
+                newAttributes.y1 = (attributes.y1 || 0) + dy;
+                newAttributes.y2 = (attributes.y2 || 0) + dy;
+            } else if (tag === 'polyline' || tag === 'polygon') {
+                var points = attributes.points || [];
+                newAttributes.points = [];
+                for (var i = 0; i < points.length; i++) {
+                    newAttributes.points[i] = (points[i] || 0) + dx;
+                    i++;
+                    newAttributes.points[i] = (points[i] || 0) + dy;
+                }
+            } else {
+                console.warn("Element " + tag + " could not be translated");
             }
 
             return newAttributes;
