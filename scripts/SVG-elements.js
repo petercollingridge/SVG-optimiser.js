@@ -85,7 +85,9 @@ SVG_Element.prototype.write = function(options, depth) {
 };
 
 SVG_Element.prototype.optimise = function(options) {
-    // No optimisation takes place here, only in specific elememnt objects, e.g. SVG_Path_Element
+    if (this.transform) {
+        this.applyTransformation(this.attributes, options);
+    }
 
     for (var i = 0; i < this.children.length; i++) {
         this.children[i].optimise(options);
@@ -103,6 +105,7 @@ SVG_Element.prototype.applyTransformation = function(coordinates, options) {
             delete this.attributes.transform;
         }
     }
+
     return coordinates;
 };
 
@@ -174,15 +177,19 @@ var SVG_Rect_Element = function(element) {
 };
 SVG_Rect_Element.prototype = Object.create(SVG_Element.prototype);
 
-SVG_Rect_Element.translate = function(parameters) {
-    var attributes = SVG_optimise.transformShape.translate('rect', this.attributes, parameters);
-    $.extend(this.attributes, attributes);
+SVG_Rect_Element.prototype.translate = function(coordinates, parameters) {
+    var attributes = SVG_optimise.transformShape.translate('rect', coordinates, parameters);
+    // TODO: Move this the the translate function when we decide how to update attributes
+    $.extend(coordinates, attributes);
+    return coordinates;
 };
 
 // Create the child element of an given element with the correct Objects
 SVG_Element.prototype.getChild = function(child) {
     if (child.nodeName === 'path') {
         return new SVG_Path_Element(child);
+    } else if (child.nodeName === 'rect') {
+        return new SVG_Rect_Element(child);
     } else {
         return new SVG_Element(child);
     }

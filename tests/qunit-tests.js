@@ -89,6 +89,19 @@ QUnit.test("transformShape.translate", function(assert) {
 	assert.deepEqual(transformFunction('rect', { }, [12, 7]), { x: 12, y: 7}, 'Translate rect with missing attributes');
 	assert.deepEqual(transformFunction('circle', { cx: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5}, 'Translate circle in 2D');
 	assert.deepEqual(transformFunction('circle', { x: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: -2.2, cy: 20.5}, 'Translate circle with cx replaced by x');
+	assert.deepEqual(transformFunction('ellipse', { cx: 10, cy: 20, rx: 10, ry: 12 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5}, 'Translate ellipse in 2D');
+});
+
+QUnit.test("Translate shapes", function(assert) {
+	var tests = [
+		['Basic rect translate 1D', '<rect transform="translate(-2.2)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12" width="24" height="16"/>'],
+		['Basic rect translate 2D', '<rect transform="translate(-2.2, 0.5)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12.5" width="24" height="16"/>']
+	];
+
+	for (var i = 0; i < tests.length; i++) {
+		var obj = new SVG_Root(tests[i][1]);
+		assert.equal(obj.write(), tests[i][2], tests[i][0]);
+	}
 });
 
 QUnit.test("transformPath.translate", function(assert) {
