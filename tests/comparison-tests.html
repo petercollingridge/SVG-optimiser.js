@@ -5,7 +5,7 @@
   <title>Comparison tests for svg-optimiser</title>
   <style>
     svg {
-      height: 240px;
+      height: 220px;
       border: 1px solid black;
       fill: none;
       top: 0;
@@ -14,6 +14,7 @@
     .svg-wrapper {
       display: inline-block;
       position: relative;
+      padding-left: 5px;
     }
 
     .test-svg svg {
@@ -39,37 +40,7 @@
 
   <div><button>Create optimised SVGs</button></div>
 
-  <div class="svg-wrapper">
-    <div class="test-svg">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">
-        <path id="absolute" transform="translate(-5, -12.005)" d="M10 30 L20 40 L30 30 z"/>
-        <path id="relative" transform="translate(-5.5)" d="m25 5 l10 10 l-10 10 z"/>
-        <path id="relative-and-absolute" transform="translate(-14.5)" d="m25 5 l-10 10 L25 25 z"/>
-        <path id="just-m-command" transform="translate(-5, -8)" d="m10 20 10 -10 10 10 z"/>
-      </svg>
-      <p>Absolute and relative paths</p>
-    </div>
-  </div>
-
-<div class="svg-wrapper">
-    <div class="test-svg">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24">
-        <rect x="5" y="4" width="20" height="16"/>
-        <path d="M3 2v16h20v-16z"/>
-      </svg>
-    </div>
-    <p>Rect and rectangular path</p>
-  </div>
-
-  <div class="svg-wrapper">
-    <div class="test-svg">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 90">
-        <path transform="translate(-0.5 -7.2)" d="M10 40 A42 24 0 1 1 90 40 C80,50 70,30 60,40 S50,50, 40,40 20,50, 10,40 M86 50 Q74 40 62 50T38 50 14 50 L30 90 H45 V80 L55,80 55,90 70,90z"/>
-        <path transform="translate(-0.5 -7.2)" d="m110 40A42 24 0 1 1 190 40c-10 10 -20 -10 -30 0s-10 10 -20 0 -20 10 -30 0m76 10q-12 -10 -24 0t-24 0 -24 0l16 40h15v-10l10 0 0 10 15 0z"/>
-      </svg>
-      <p>Multi-command path (absolute and relative)</p>
-    </div>
-  </div>
+  <div id="test-svgs"></div>
 
 </div>
 
@@ -79,6 +50,42 @@
 
   <script>
     // TODO: move into a separate file
+
+    var $testSVGs = $('#test-svgs');
+
+    var testSVGStrings = {
+      "Absolute and relative paths":
+       '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 30">' +
+       '<path id="absolute" d="M5 18 L15 28 L25 18 z"/>' +
+       '<path id="relative" d="m19.5 5 l10 10 l-10 10 z"/>' +
+       '<path id="relative-and-absolute" d="m10.5 5 l-10 10 L10.5 25 z"/>' +
+       '<path id="just-m-command" d="m5 12 10 -10 10 10 z"/>' + 
+       '</svg>',
+      "Rect and rectangular path":
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 30 24"><rect x="5" y="4" width="20" height="16"/><path d="M3 2v16h20v-16z"/></svg>',
+      "Multi-command path (absolute and relative)":
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 100">' +
+        '<path d="M10 40A42 24 0 1 1 90 40 C80,50 70,30 60,40S50,50, 40,40 20,50, 10,40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80 L55,80 55,90 70,90z"/>' +
+        '<path d="m110 40A42 24 0 1 1 190 40c-10 10 -20 -10 -30 0s-10 10 -20 0 -20 10 -30 0m76 10q-12 -10 -24 0t-24 0 -24 0l16 40h15v-10l10 0 0 10 15 0z"/>'+
+        '</svg>',
+      "Non-path elements":
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">' +
+        '<rect x="20" y="4" width="60" height="10"/>' +
+        '<circle cx="36" cy="36.5" r="10"/>' +
+        '<ellipse cx="64" cy="36.5" rx="10" ry="15"/>' +
+        '<line x1="48" y1="50" x2="55" y2="65"/>' +
+        '<polygon points="20,14 5,50, 30,90, 70,90, 95,50, 80,14"/>' +
+        '<polyline points="30,70 40,80 60,80 70,70"/>' + 
+        '</svg>'
+    };
+
+    for (var SVGStr in testSVGStrings) {
+      var svg = new SVG_Root(testSVGStrings[SVGStr]).createSVGObject();
+      var $wrapper1 = $('<div/>', { class: 'svg-wrapper'}).appendTo($testSVGs);
+      var $wrapper2 = $('<div/>', { class: 'test-svg'}).appendTo($wrapper1);
+      $wrapper2.append(svg);
+      $wrapper2.append('<p>' + SVGStr + '</p>');
+    }
 
     // Get divs containing test SVGs
     var $testCases = $('.svg-wrapper');
