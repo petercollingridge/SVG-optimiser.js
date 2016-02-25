@@ -26,7 +26,7 @@ var SVG_Element = function(element) {
 
     // Parse attributes
     if (this.attributes.transform) {
-        this.transform = SVG_optimise.parseTransforms(this.attributes.transform);
+        this.addTransform(this.attributes.transform);
     }
 
     for (i = 0; i < element.childNodes.length; i++) {
@@ -40,6 +40,14 @@ var SVG_Element = function(element) {
             this.children.push(this.getChild(child));
         }
     }
+};
+
+// TODO: make sure this works with multiple transforms
+SVG_Element.prototype.addTransform = function(transform) {
+    this.transform = SVG_optimise.parseTransforms(transform);
+    // TODO: Only doing this so it shows up when we write the object
+    // Need to fix so that we can do this without calling optimise
+    this.attributes.transform = transform;
 };
 
 SVG_Element.prototype.write = function(options, depth) {
@@ -98,6 +106,7 @@ SVG_Element.prototype.applyTransformation = function(coordinates, options) {
     for (var i = 0; i < this.transform.length; i++) {
         var transform = this.transform[i];
         var transformFunction = this[transform[0]];
+
         if (transformFunction) {
             coordinates = transformFunction(coordinates, transform.slice(1));
             // Remove transformation from the attribute hash
@@ -147,7 +156,7 @@ SVG_Path_Element.prototype.optimise = function(options) {
         var optimisedPath = this.path;
 
         if (this.transform) {
-            this.applyTransformation(optimisedPath, options);
+            optimisedPath = this.applyTransformation(optimisedPath, options);
         }
 
         optimisedPath = SVG_optimise.optimisePath(optimisedPath, options);
@@ -160,10 +169,13 @@ SVG_Path_Element.prototype.optimise = function(options) {
     }
 };
 
-SVG_Path_Element.translate = function(coordinates, parameters) {
+SVG_Path_Element.prototype.translate = function(coordinates, parameters) {
     return SVG_optimise.transformPath.translate(coordinates, parameters);
 };
 
+SVG_Path_Element.prototype.scale = function(coordinates, parameters) {
+    return SVG_optimise.transformPath.scale(coordinates, parameters);
+};
 
 // Rect element
 // https://www.w3.org/TR/SVG/shapes.html#RectElement
