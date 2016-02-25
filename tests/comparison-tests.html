@@ -80,10 +80,18 @@
     };
 
     for (var SVGStr in testSVGStrings) {
-      var svg = new SVG_Root(testSVGStrings[SVGStr]).createSVGObject();
+      var svg = new SVG_Root(testSVGStrings[SVGStr])
+
+      // Add transformation to each element in the SVG
+      svg.elements.children.forEach(function(element) {
+        element.addTransform('scale(1.5, 1.25)');
+        //element.addTransform('translate(1.2, -1.005)');
+      });
+      
+      
       var $wrapper1 = $('<div/>', { class: 'svg-wrapper'}).appendTo($testSVGs);
       var $wrapper2 = $('<div/>', { class: 'test-svg'}).appendTo($wrapper1);
-      $wrapper2.append(svg);
+      $wrapper2.append(svg.createSVGObject());
       $wrapper2.append('<p>' + SVGStr + '</p>');
     }
 
