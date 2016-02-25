@@ -175,7 +175,7 @@ var SVG_optimise = {
             }
 
             return newAttributes;
-        }
+        },
     },
 
     transformPath: {
@@ -229,6 +229,66 @@ var SVG_optimise = {
 
             return translatedPath;
         },
+        scale: function(pathCommands, parameters) {
+            var dx = parameters[0] || 0;
+            var dy = parameters[1] || 0;
+
+            // TODO: move these elsewhere
+            var simpleScales = 'mlqtcsz';
+
+            var scaledPath = [];
+            var command, commandLetter, scaledCommand, i, j;
+
+            for (i = 0; i < pathCommands.length; i++) {
+                command = pathCommands[i];
+                commandLetter = command[0].toLowerCase();
+                scaledCommand = command.slice();
+
+                // For simple commands, just add (dx, dy) to each pair of values
+                if (simpleScales.indexOf(commandLetter) > -1) {
+                    for (j = 1; j < command.length;) {
+                        scaledCommand[j++] *= dx;
+                        scaledCommand[j++] *= dy;
+                    }
+                } else if (commandLetter === 'h') {
+                    // Should only ever be one command if we have optimised
+                    for (j = 1; j < command.length; j++) {
+                        scaledCommand[j] *= dx;
+                    }
+                } else if (commandLetter === 'v') {
+                    // Should only ever be one command if we have optimised
+                    for (j = 1; j < command.length; j++) {
+                        scaledCommand[j] *= dy;
+                    }
+                } else if (commandLetter === 'a') {
+                    // TODO: Check this works
+                    for (j = 1; j < command.length; j += 7) {
+                        if (dx > 0) {
+                            scaledCommand[j] *= dx;
+                        } else {
+                            scaledCommand[j] *= -dx;
+                            // Flip sweep flag
+                            scaledCommand[j + 4] = 1 - scaledCommand[j + 4];
+                        }
+                        if (dy > 0) {
+                            scaledCommand[j + 1] *= dy;
+                        } else {
+                            // Flip sweep flag
+                            scaledCommand[j + 1] *= -dy;
+                            scaledCommand[j + 4] = 1 - scaledCommand[j + 4];
+                        }
+                        scaledCommand[j + 5] *= dx;
+                        scaledCommand[j + 6] *= dy;
+                    }
+                } else {
+                    console.warn("Unexpected letter in path: " + command[0]);
+                }
+
+                scaledPath.push(scaledCommand);
+            }
+
+            return scaledPath;
+        }
     },
 
     // Given an array of arrays of the type from by parsePath,
