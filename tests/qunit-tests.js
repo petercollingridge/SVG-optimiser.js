@@ -92,18 +92,6 @@ QUnit.test("transformShape.translate", function(assert) {
 	assert.deepEqual(transformFunction('ellipse', { cx: 10, cy: 20, rx: 10, ry: 12 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5}, 'Translate ellipse in 2D');
 });
 
-QUnit.test("Translate shapes", function(assert) {
-	var tests = [
-		['Basic rect translate 1D', '<rect transform="translate(-2.2)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12" width="24" height="16"/>'],
-		['Basic rect translate 2D', '<rect transform="translate(-2.2, 0.5)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12.5" width="24" height="16"/>']
-	];
-
-	for (var i = 0; i < tests.length; i++) {
-		var obj = new SVG_Root(tests[i][1]);
-		assert.equal(obj.write(), tests[i][2], tests[i][0]);
-	}
-});
-
 QUnit.test("transformPath.translate", function(assert) {
 	var transformFunction = SVG_optimise.transformPath.translate;
 	assert.deepEqual(transformFunction(
@@ -160,6 +148,59 @@ QUnit.test("getPathString", function(assert) {
 });
 
 // Test elements are optimised as expected
+QUnit.test("Translate shapes", function(assert) {
+	var tests = [
+		['Basic rect translate 1D', '<rect transform="translate(-2.2)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12" width="24" height="16"/>'],
+		['Basic rect translate 2D', '<rect transform="translate(-2.2, 0.5)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12.5" width="24" height="16"/>']
+	];
+
+	for (var i = 0; i < tests.length; i++) {
+		var obj = new SVG_Root(tests[i][1]);
+		assert.equal(obj.write(), tests[i][2], tests[i][0]);
+	}
+});
+
+QUnit.test("Translate paths", function(assert) {
+	var paths = {
+		absolute: "M10 40A42 24 0 1 1 90 40 C80,50 70,30 60,40 S50,50, 40,40 20,50, 10,40 M86 50Q74 40 62 50 T38 50 14 50 L30 90H45V80 L55,80 55,90 70,90z",
+		relative: "m10 40a42 24 0 1 1 80 0c-10 10 -20 -10 -30 0s-10 10 -20 0 -20 10 -30 0m76 10q-12 -10 -24 0t-24 0 -24 0l16 40h15v-10l10 0 0 10 15 0z",
+		'just m commands': "m5 12 10 -10 10 10 z"
+	};
+
+	var translations = {
+		'translate(0)': {
+			transform: "translate(0)",
+			absolute: "M10 40A42 24 0 1 1 90 40C80 50 70 30 60 40S50 50 40 40 20 50 10 40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80L55 80 55 90 70 90z",
+			relative: "m10 40a42 24 0 1 1 80 0c-10 10-20-10-30 0s-10 10-20 0-20 10-30 0m76 10q-12-10-24 0t-24 0-24 0l16 40h15v-10l10 0 0 10 15 0z",
+			'just m commands': "m5 12 10-10 10 10z"
+		},
+		'translate(0, 0)': {
+			transform: "translate(0, 0)",
+			absolute: "M10 40A42 24 0 1 1 90 40C80 50 70 30 60 40S50 50 40 40 20 50 10 40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80L55 80 55 90 70 90z",
+			relative: "m10 40a42 24 0 1 1 80 0c-10 10-20-10-30 0s-10 10-20 0-20 10-30 0m76 10q-12-10-24 0t-24 0-24 0l16 40h15v-10l10 0 0 10 15 0z",
+			'just m commands': "m5 12 10-10 10 10z"
+		},
+		'translate(4.5)': {
+			transform: "translate(4.5)",
+			absolute: "M14.5 40A42 24 0 1 1 94.5 40C84.5 50 74.5 30 64.5 40S54.5 50 44.5 40 24.5 50 14.5 40M90.5 50Q78.5 40 66.5 50T42.5 50 18.5 50L34.5 90H49.5V80L59.5 80 59.5 90 74.5 90z",
+			relative: "m14.5 40a42 24 0 1 1 80 0c-10 10-20-10-30 0s-10 10-20 0-20 10-30 0m76 10q-12-10-24 0t-24 0-24 0l16 40h15v-10l10 0 0 10 15 0z",
+			'just m commands': "m9.5 12 10-10 10 10z"
+		},
+	};
+
+	for (var translate in translations) {
+		var data = translations[translate];
+
+		for (var pathType in paths) {
+			var testPath = '<path transform="' + data.transform +'" d="' + paths[pathType] + '"/>';
+			var expectedPath = '<path d="' + data[pathType] + '"/>';
+			var obj = new SVG_Root(testPath);
+			obj.optimise();
+			assert.equal(obj.write(), expectedPath, translate + ' transform ' + pathType);
+		}
+	}
+});
+
 QUnit.test("Optimise path elements", function(assert) {
 	var tests = [
 		// Paths to remove
