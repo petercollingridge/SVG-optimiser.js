@@ -7,6 +7,7 @@
 var SVG_Element = function(element) {
     this.tag = element.nodeName;
     this.attributes = {};
+    this.originalAttributes = {};
     this.styles = {};
     this.children = [];
     this.text = "";
@@ -14,14 +15,13 @@ var SVG_Element = function(element) {
     // TODO: may need to replace this with actual namespace
     this.namespaceURI = 'http://www.w3.org/2000/svg';
 
-    // Add attributes to hash
-    var i, attributes = element.attributes;
-    if (element.attributes) {
-        for (i = 0; i < attributes.length; i++){
-            var attr = attributes.item(i);
-            var attrName = attr.nodeName;
-            this.attributes[attrName] = attr.value;
-        }
+    // Add attributes to two hashs, one for the original and one for optimising
+    var i, attributes = element.attributes || [];
+    for (i = 0; i < attributes.length; i++){
+        var attr = attributes.item(i);
+        var attrName = attr.nodeName;
+        this.originalAttributes[attrName] = attr.value;
+        this.attributes[attrName] = attr.value;
     }
 
     // Parse attributes
@@ -39,6 +39,15 @@ var SVG_Element = function(element) {
         } else {
             this.children.push(this.getChild(child));
         }
+    }
+
+};
+
+// Copy attributes so we can optimise them without losing them
+SVG_Element.prototype.getOriginalAttributes = function() {
+    this.attributes = {};
+    for (var attr in this.originalAttributes) {
+        this.attributes[attr] = this.originalAttributes[attr];
     }
 };
 
@@ -93,12 +102,20 @@ SVG_Element.prototype.write = function(options, depth) {
 };
 
 SVG_Element.prototype.optimise = function(options) {
-    if (this.transform) {
-        this.applyTransformation(this.attributes, options);
-    }
+    // Get set copy of attributes to optimise
+    this.getOriginalAttributes();
+
+    this.elementSpecificOptimisations(options);
 
     for (var i = 0; i < this.children.length; i++) {
         this.children[i].optimise(options);
+    }
+};
+
+// Overwritten by other object classes
+SVG_Element.prototype.elementSpecificOptimisations = function(options) {
+    if (this.transform) {
+        this.applyTransformation(this.attributes, options);
     }
 };
 
@@ -107,6 +124,7 @@ SVG_Element.prototype.applyTransformation = function(coordinates, options) {
         var transform = this.transform[i];
         var transformFunction = this[transform[0]];
 
+        // TODO: strip out meaningless transforms
         if (transformFunction) {
             coordinates = transformFunction(coordinates, transform.slice(1));
             // Remove transformation from the attribute hash
@@ -150,7 +168,7 @@ var SVG_Path_Element = function(element) {
 };
 SVG_Path_Element.prototype = Object.create(SVG_Element.prototype);
 
-SVG_Path_Element.prototype.optimise = function(options) {
+SVG_Path_Element.prototype.elementSpecificOptimisations = function(options) {
     // Replace current d attributed with optimised version
     if (this.path) {
         var optimisedPath = this.path;
@@ -164,9 +182,6 @@ SVG_Path_Element.prototype.optimise = function(options) {
         this.attributes.d = SVG_optimise.getPathString(optimisedPath, options);
     }
 
-    for (var i = 0; i < this.children.length; i++) {
-        this.children[i].optimise(options);
-    }
 };
 
 SVG_Path_Element.prototype.translate = function(coordinates, parameters) {
@@ -182,10 +197,11 @@ SVG_Path_Element.prototype.scale = function(coordinates, parameters) {
 var SVG_Rect_Element = function(element) {
     SVG_Element.call(this, element);
 
-    this.attributes.x = parseFloat(this.attributes.x || 0);
-    this.attributes.y = parseFloat(this.attributes.y || 0);
-    this.attributes.width = parseFloat(this.attributes.width || 0);
-    this.attributes.height = parseFloat(this.attributes.height || 0);
+    this.originalAttributes.x = parseFloat(this.originalAttributes.x || 0);
+    this.originalAttributes.y = parseFloat(this.originalAttributes.y || 0);
+    this.originalAttributes.width = parseFloat(this.originalAttributes.width || 0);
+    this.originalAttributes.height = parseFloat(this.originalAttributes.height || 0);
+    
 };
 SVG_Rect_Element.prototype = Object.create(SVG_Element.prototype);
 
