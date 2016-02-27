@@ -185,7 +185,7 @@ var SVG_optimise = {
 
             // TODO: move these elsewhere
             var simpleTranslations = 'MLQTCS';
-            var nullTranslations = 'mlhvqtcsZz';
+            var nullTranslations = 'mlhvqtcsZza';
 
             var translatedPath = [];
             var command, commandLetter, translatedCommand, i, j;
