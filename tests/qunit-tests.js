@@ -53,7 +53,7 @@ QUnit.test("parseTransforms", function(assert) {
 	assert.deepEqual(SVG_optimise.parseTransforms("  rotate ( 4  ) "), [['rotate', 4]], "Extra spaces");
 	assert.deepEqual(SVG_optimise.parseTransforms("rotate(5 -8.5)"), [['rotate', 5, -8.5]], "Negative decimal separated by space");
 	assert.deepEqual(SVG_optimise.parseTransforms("rotate(5,-8.5)"), [['rotate', 5, -8.5]], "Negative decimal separated by comma");
-	assert.deepEqual(SVG_optimise.parseTransforms("matrix(0, 1.0 , -2.07 4e2    5e-3,-7.3e+2 )"), [['matrix', 0, 1, -2.07, 400, 0.005, -730]], "Matrix with mixed numbers and delimiters");
+	assert.deepEqual(SVG_optimise.parseTransforms("matrix(0, 1.0 , -2.07 4E2    5e-3,-7.3e+2 )"), [['matrix', 0, 1, -2.07, 400, 0.005, -730]], "Matrix with mixed numbers and delimiters");
 	assert.deepEqual(SVG_optimise.parseTransforms("SCALE(-0.005, 3.220) Translate(0),rotate( -9.2, 3e-2 7) "), [['scale', -0.005, 3.22], ['translate', 0], ['rotate', -9.2, 0.03, 7]], "Multiple transforms");
 });
 
@@ -151,6 +151,32 @@ QUnit.test("transformPath.translate", function(assert) {
 });
 
 // Whole element tests
+
+var readWriteTests = {
+	"Don't remove empty element": '<rect/>',
+	"Don't optimise attributes": '<rect x="0" y="10.00" width=" 50 " height="100.0"/>',
+	multipath: '<path d="M10 40A42 24 0 1 1 90 40C80 50 70 30 60 40S50 50 40 40 20 50 10 40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80L55 80 55 90 70 90z"/>'
+};
+
+QUnit.test("Read then write SVG string", function(assert) {
+	for (var test in readWriteTests) {
+		var str = readWriteTests[test];
+		var obj = new SVG_Root(str);
+		assert.equal(obj.write(), str, test);
+	}
+});
+
+// Read an SVG string, create a DOM element from it, then read that and write it as a string
+QUnit.test("Test createSVGObject", function(assert) {
+	for (var test in readWriteTests) {
+		var str = readWriteTests[test];
+		var obj1 = new SVG_Root(str);
+		var obj2 = obj1.createSVGObject();
+		var obj3 = new SVG_Root(obj2);
+		assert.equal(obj3.write(), str, test);
+	}
+});
+
 QUnit.test("Translate shapes", function(assert) {
 	var tests = [
 		['Basic rect translate 1D', '<rect transform="translate(-2.2)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12" width="24" height="16"/>'],
@@ -159,6 +185,7 @@ QUnit.test("Translate shapes", function(assert) {
 
 	for (var i = 0; i < tests.length; i++) {
 		var obj = new SVG_Root(tests[i][1]);
+		obj.optimise();
 		assert.equal(obj.write(), tests[i][2], tests[i][0]);
 	}
 });
@@ -233,6 +260,7 @@ QUnit.test("Optimise path elements", function(assert) {
 
 	for (var i = 0; i < tests.length; i++) {
 		var obj = new SVG_Root(tests[i][1]);
+		obj.optimise();
 		assert.equal(obj.write(), tests[i][2], tests[i][0]);
 	}
 });

@@ -49,6 +49,9 @@ SVG_Element.prototype.getOriginalAttributes = function() {
     for (var attr in this.originalAttributes) {
         this.attributes[attr] = this.originalAttributes[attr];
     }
+
+    // Should we remove this element when optimising
+    this.toRemove = false;
 };
 
 // TODO: make sure this works with multiple transforms
@@ -60,24 +63,13 @@ SVG_Element.prototype.addTransform = function(transform) {
 };
 
 SVG_Element.prototype.write = function(options, depth) {
+    if (this.toRemove) { return ""; }
+
     depth = depth || 0;
     var indent = (options.whitespace === 'remove') ? '' : new Array(depth + 1).join('  ');
 
     // Open tag
     var str = indent + '<' + this.tag;
-
-    this.optimise(options);
-
-    // If shape element lacks some dimension then don't draw it
-    // TODO: move this into the optimise function
-    var essentialAttributes = SVG_optimise.essentialAttributes[this.tag];
-    if (options.removeRedundantShapes && essentialAttributes) {
-        for (var i = 0; i < essentialAttributes.length; i++) {
-            if (!this.attributes[essentialAttributes[i]]) {
-                return "";
-            }
-        }
-    }
 
     // Write attributes
     for (var attr in this.attributes) {
@@ -101,11 +93,42 @@ SVG_Element.prototype.write = function(options, depth) {
     return str + options.newLine;
 };
 
+SVG_Element.prototype.createSVGObject = function() {
+    var element = document.createElementNS(this.namespaceURI, this.tag);
+
+    for (var attr in this.attributes) {
+        element.setAttribute(attr, this.attributes[attr]);
+    }
+
+    if (this.text) {
+        var textNode = document.createTextNode(this.text);
+        element.appendChild(textNode);
+    }
+
+    for (var i = 0; i < this.children.length; i++) {
+        element.appendChild(this.children[i].createSVGObject());
+    }
+
+    return element;
+};
+
 SVG_Element.prototype.optimise = function(options) {
     // Get set copy of attributes to optimise
     this.getOriginalAttributes();
 
     this.elementSpecificOptimisations(options);
+
+    // If an shape element lacks some dimension then don't draw it
+    var essentialAttributes = SVG_optimise.essentialAttributes[this.tag];
+    if (options.removeRedundantShapes && essentialAttributes) {
+        for (var i = 0; i < essentialAttributes.length; i++) {
+            if (!this.attributes[essentialAttributes[i]]) {
+                this.toRemove = true;
+                // If we remove the element, then remove its children
+                return;
+            }
+        }
+    }
 
     for (var i = 0; i < this.children.length; i++) {
         this.children[i].optimise(options);
@@ -134,25 +157,6 @@ SVG_Element.prototype.applyTransformation = function(coordinates, options) {
     }
 
     return coordinates;
-};
-
-SVG_Element.prototype.createSVGObject = function() {
-    var element = document.createElementNS(this.namespaceURI, this.tag);
-
-    for (var attr in this.attributes) {
-        element.setAttribute(attr, this.attributes[attr]);
-    }
-
-    if (this.text) {
-        var textNode = document.createTextNode(this.text);
-        element.appendChild(textNode);
-    }
-
-    for (var i = 0; i < this.children.length; i++) {
-        element.appendChild(this.children[i].createSVGObject());
-    }
-
-    return element;
 };
 
 
@@ -201,7 +205,7 @@ var SVG_Rect_Element = function(element) {
     this.originalAttributes.y = parseFloat(this.originalAttributes.y || 0);
     this.originalAttributes.width = parseFloat(this.originalAttributes.width || 0);
     this.originalAttributes.height = parseFloat(this.originalAttributes.height || 0);
-    
+
 };
 SVG_Rect_Element.prototype = Object.create(SVG_Element.prototype);
 
