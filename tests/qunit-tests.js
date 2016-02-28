@@ -47,8 +47,10 @@ QUnit.test("parseStyle", function(assert) {
 QUnit.test("parseTransforms", function(assert) {
 	assert.deepEqual(SVG_optimise.parseTransforms(""), [], "Empty string");
 	assert.deepEqual(SVG_optimise.parseTransforms("translate(five)"), [], "No number");
-	assert.deepEqual(SVG_optimise.parseTransforms("translate(5)"), [['translate', 5]], "Integer");
-	assert.deepEqual(SVG_optimise.parseTransforms("  rotate ( 5  ) "), [['rotate', 5]], "Integer with spaces");
+	assert.deepEqual(SVG_optimise.parseTransforms("move(1)"), [], "Not a valid transform");
+	assert.deepEqual(SVG_optimise.parseTransforms("SkEwX(2)"), [['skewX', 2]], "Not a valid transform");
+	assert.deepEqual(SVG_optimise.parseTransforms("translate(3)"), [['translate', 3]], "Integer");
+	assert.deepEqual(SVG_optimise.parseTransforms("  rotate ( 4  ) "), [['rotate', 4]], "Extra spaces");
 	assert.deepEqual(SVG_optimise.parseTransforms("rotate(5 -8.5)"), [['rotate', 5, -8.5]], "Negative decimal separated by space");
 	assert.deepEqual(SVG_optimise.parseTransforms("rotate(5,-8.5)"), [['rotate', 5, -8.5]], "Negative decimal separated by comma");
 	assert.deepEqual(SVG_optimise.parseTransforms("matrix(0, 1.0 , -2.07 4e2    5e-3,-7.3e+2 )"), [['matrix', 0, 1, -2.07, 400, 0.005, -730]], "Matrix with mixed numbers and delimiters");
@@ -81,6 +83,33 @@ QUnit.test("getRoundingFunction", function(assert) {
 	assert.equal(roundingFunction(5.995), 6, "Zero decimal places: Round three times");
 });
 
+QUnit.test("optimisePath", function(assert) {
+	var options = {};
+
+	assert.deepEqual(SVG_optimise.optimisePath([], options), [], "Empty array");
+	assert.deepEqual(SVG_optimise.optimisePath([[]], options), [], "Array with empty array");
+	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['M', 12, -5.5], ['z']], options), [], "Remove empty path");
+	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21]], options), [['M', 5, 10], ['L', 12, 21]], "Two commands");
+	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21], ['z']], options), [['M', 5, 10], ['L', 12, 21], ['z']], "Include z command");
+	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21], ['L', 18, 12]], options), [['M', 5, 10], ['L', 12, 21, 18, 12]], "Combine repeated commands");
+	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['v', 12, -5.5]], options), [['M', 5, 10], ['v', 6.5]], "Combine vertical command");
+	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['h', 12, -5.5], ['h', 13]], options), [['M', 5, 10], ['h', 19.5]], "Combine repeated horizontal command");
+});
+
+QUnit.test("getPathString", function(assert) {
+	var options = {
+		positionDecimals: function(n) { return n; }
+	};
+
+	assert.equal(SVG_optimise.getPathString([], options), "", "Empty array");
+	assert.equal(SVG_optimise.getPathString([[]], options), "", "Array with empty array");
+	assert.equal(SVG_optimise.getPathString([['M', 5, 10], ['L', 12, 21]], options), "M5 10L12 21", "Two commands");
+	assert.equal(SVG_optimise.getPathString([['M', 5, 10], ['a', 150, 254, 0, 0, 0, 15, 150]], options), "M5 10a150 254 0 0 0 15 150", "Arc command");
+	assert.equal(SVG_optimise.getPathString([['M', 5, 10], ['L', 12, 21], ['z']], options), "M5 10L12 21z", "Include z command");
+	assert.equal(SVG_optimise.getPathString([['M', -5, 10], ['L', 12, -21]], options), "M-5 10L12-21", "Commands with negatives");
+});
+
+// Transformation tests
 QUnit.test("transformShape.translate", function(assert) {
 	var transformFunction = SVG_optimise.transformShape.translate;
 	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, []), { x: 10, y: 20}, 'Null translate rect');
@@ -121,33 +150,7 @@ QUnit.test("transformPath.translate", function(assert) {
 	// TODO: add multipath
 });
 
-QUnit.test("optimisePath", function(assert) {
-	var options = {};
-
-	assert.deepEqual(SVG_optimise.optimisePath([], options), [], "Empty array");
-	assert.deepEqual(SVG_optimise.optimisePath([[]], options), [], "Array with empty array");
-	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['M', 12, -5.5], ['z']], options), [], "Remove empty path");
-	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21]], options), [['M', 5, 10], ['L', 12, 21]], "Two commands");
-	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21], ['z']], options), [['M', 5, 10], ['L', 12, 21], ['z']], "Include z command");
-	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['L', 12, 21], ['L', 18, 12]], options), [['M', 5, 10], ['L', 12, 21, 18, 12]], "Combine repeated commands");
-	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['v', 12, -5.5]], options), [['M', 5, 10], ['v', 6.5]], "Combine vertical command");
-	assert.deepEqual(SVG_optimise.optimisePath([['M', 5, 10], ['h', 12, -5.5], ['h', 13]], options), [['M', 5, 10], ['h', 19.5]], "Combine repeated horizontal command");
-});
-
-QUnit.test("getPathString", function(assert) {
-	var options = {
-		positionDecimals: function(n) { return n; }
-	};
-
-	assert.equal(SVG_optimise.getPathString([], options), "", "Empty array");
-	assert.equal(SVG_optimise.getPathString([[]], options), "", "Array with empty array");
-	assert.equal(SVG_optimise.getPathString([['M', 5, 10], ['L', 12, 21]], options), "M5 10L12 21", "Two commands");
-	assert.equal(SVG_optimise.getPathString([['M', 5, 10], ['a', 150, 254, 0, 0, 0, 15, 150]], options), "M5 10a150 254 0 0 0 15 150", "Arc command");
-	assert.equal(SVG_optimise.getPathString([['M', 5, 10], ['L', 12, 21], ['z']], options), "M5 10L12 21z", "Include z command");
-	assert.equal(SVG_optimise.getPathString([['M', -5, 10], ['L', 12, -21]], options), "M-5 10L12-21", "Commands with negatives");
-});
-
-// Test elements are optimised as expected
+// Whole element tests
 QUnit.test("Translate shapes", function(assert) {
 	var tests = [
 		['Basic rect translate 1D', '<rect transform="translate(-2.2)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12" width="24" height="16"/>'],
@@ -185,6 +188,12 @@ QUnit.test("Translate paths", function(assert) {
 			absolute: "M14.5 40A42 24 0 1 1 94.5 40C84.5 50 74.5 30 64.5 40S54.5 50 44.5 40 24.5 50 14.5 40M90.5 50Q78.5 40 66.5 50T42.5 50 18.5 50L34.5 90H49.5V80L59.5 80 59.5 90 74.5 90z",
 			relative: "m14.5 40a42 24 0 1 1 80 0c-10 10-20-10-30 0s-10 10-20 0-20 10-30 0m76 10q-12-10-24 0t-24 0-24 0l16 40h15v-10l10 0 0 10 15 0z",
 			'just m commands': "m9.5 12 10-10 10 10z"
+		},
+		'translate(4.5, -0.7)': {
+			transform: "translate(4.5, -0.7)",
+			absolute: "M14.5 39.3A42 24 0 1 1 94.5 39.3C84.5 49.3 74.5 29.3 64.5 39.3S54.5 49.3 44.5 39.3 24.5 49.3 14.5 39.3M90.5 49.3Q78.5 39.3 66.5 49.3T42.5 49.3 18.5 49.3L34.5 89.3H49.5V79.3L59.5 79.3 59.5 89.3 74.5 89.3z",
+			relative: "m14.5 39.3a42 24 0 1 1 80 0c-10 10-20-10-30 0s-10 10-20 0-20 10-30 0m76 10q-12-10-24 0t-24 0-24 0l16 40h15v-10l10 0 0 10 15 0z",
+			'just m commands': "m9.5 11.3 10-10 10 10z"
 		},
 	};
 

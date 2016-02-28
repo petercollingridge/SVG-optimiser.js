@@ -88,12 +88,16 @@ var SVG_optimise = {
 
     // Convert transform attribute into an array of [transformation, digits]
     parseTransforms: function(transformString) {
-        var reTransform = /([a-z]+)\s*\(([-\+\d\.\s,e]+)\)/gi;
-        var digit, transform, transforms = [];
+        var reTransform = /(translate|scale|rotate|matrix|skewX|skewY)\s*\(([-\+\d\.\s,e]+)\)/gi;
+        var transformName, digit, transform, transforms = [];
 
         while (transform = reTransform.exec(transformString)) {
+            transformName = transform[1].toLowerCase();
+            if (transformName === 'skewx') transformName = 'skewX';
+            if (transformName === 'skewy') transformName = 'skewY';
+
             digits = transform[2].split(/\s*[,\s]+\s*/);
-            transform = [transform[1].toLowerCase()];
+            transform = [transformName];
 
             for (var i = 0; i < digits.length; i++) {
                 digit = parseFloat(digits[i]);
