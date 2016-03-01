@@ -112,13 +112,14 @@ QUnit.test("getPathString", function(assert) {
 // Transformation tests
 QUnit.test("transformShape.translate", function(assert) {
 	var transformFunction = SVG_optimise.transformShape.translate;
-	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, []), { x: 10, y: 20}, 'Null translate rect');
-	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, [12, 7]), { x: 22, y: 27}, 'Translate rect in 2D');
-	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, [-2.2, 0.5]), { x: 7.8, y: 20.5}, 'Translate rect in 2D with negative and decimal');
-	assert.deepEqual(transformFunction('rect', { }, [12, 7]), { x: 12, y: 7}, 'Translate rect with missing attributes');
-	assert.deepEqual(transformFunction('circle', { cx: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5}, 'Translate circle in 2D');
-	assert.deepEqual(transformFunction('circle', { x: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: -2.2, cy: 20.5}, 'Translate circle with cx replaced by x');
-	assert.deepEqual(transformFunction('ellipse', { cx: 10, cy: 20, rx: 10, ry: 12 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5}, 'Translate ellipse in 2D');
+	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, []), { x: 10, y: 20 }, 'Null translate rect');
+	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, [12, 7]), { x: 22, y: 27 }, 'Translate rect in 2D');
+	assert.deepEqual(transformFunction('rect', { x: 10, y: 20, width: 25, height: 16 }, [-2.2, 0.5]), { x: 7.8, y: 20.5 }, 'Translate rect in 2D with negative and decimal');
+	assert.deepEqual(transformFunction('rect', { }, [12, 7]), { x: 12, y: 7 }, 'Translate rect with missing attributes');
+	assert.deepEqual(transformFunction('circle', { cx: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5 }, 'Translate circle in 2D');
+	assert.deepEqual(transformFunction('circle', { x: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: -2.2, cy: 20.5 }, 'Translate circle with cx replaced by x');
+	assert.deepEqual(transformFunction('ellipse', { cx: 10, cy: 20, rx: 10, ry: 12 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5 }, 'Translate ellipse in 2D');
+	assert.deepEqual(transformFunction('line', { x1: 10, y1: 20, x2: 110.5, y2: -120 }, [-2.2, 0.5]), { x1: 7.8, y1: 20.5, x2: 108.3, y2: -119.5 }, 'Translate line in 2D');
 });
 
 QUnit.test("transformPath.translate", function(assert) {
@@ -155,15 +156,21 @@ QUnit.test("transformPath.translate", function(assert) {
 var readWriteTests = {
 	"Don't remove empty element": '<rect/>',
 	"Don't optimise attributes": '<rect x="0" y="10.00" width=" 50 " height="100.0"/>',
-	multipath: '<path d="M10 40A42 24 0 1 1 90 40C80 50 70 30 60 40S50 50 40 40 20 50 10 40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80L55 80 55 90 70 90z"/>'
+	multipath: '<path d="M10 40A42 24 0 1 1 90 40C80 50 70 30 60 40S50 50 40 40 20 50 10 40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80L55 80 55 90 70 90z"/>',
+	'Test indentation': '<svg><circle cx="20" cy="20" r="100"/></svg>'
 };
 
 QUnit.test("Read then write SVG string", function(assert) {
-	for (var test in readWriteTests) {
-		var str = readWriteTests[test];
-		var obj = new SVG_Root(str);
+	var obj, str, test;
+	for (test in readWriteTests) {
+		str = readWriteTests[test];
+		obj = new SVG_Root(str);
 		assert.equal(obj.write(), str, test);
 	}
+
+	obj = new SVG_Root(readWriteTests['Test indentation']);
+	obj.options.whitespace = 'pretty';
+	assert.equal(obj.write(), '<svg>\n  <circle cx="20" cy="20" r="100"/>\n</svg>', 'Indentation test 2');
 });
 
 // Read an SVG string, create a DOM element from it, then read that and write it as a string

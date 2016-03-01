@@ -14,6 +14,7 @@ var SVG_optimise = {
         svgString =  svgString.replace(/^[\s\n]*/, "");
 
         // Parse SVG as XML
+        // TODO: wrap in a try and fail gracefully with badly formatted XML
         var svgDoc = $.parseXML(svgString);
         return $(svgDoc).children()[0];
     },

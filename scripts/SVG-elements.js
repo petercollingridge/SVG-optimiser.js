@@ -83,14 +83,14 @@ SVG_Element.prototype.write = function(options, depth) {
     }
 
     if (this.text.length + childString.length > 0) {
-        str += ">";
+        str += ">" + options.newLine;
         if (this.text) { str += indent + "  " + this.text; }
         str += childString + indent + "</" + this.tag + ">";
     } else {
-        str += "/>";
+        str += "/>" + options.newLine;
     }
 
-    return str + options.newLine;
+    return str;
 };
 
 SVG_Element.prototype.createSVGObject = function() {
