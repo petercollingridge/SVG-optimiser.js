@@ -152,7 +152,6 @@ QUnit.test("transformPath.translate", function(assert) {
 });
 
 // Whole element tests
-
 var readWriteTests = {
 	"Don't remove empty element": '<rect/>',
 	"Don't optimise attributes": '<rect x="0" y="10.00" width=" 50 " height="100.0"/>',
@@ -160,6 +159,7 @@ var readWriteTests = {
 	'Test indentation': '<svg><circle cx="20" cy="20" r="10"/><line x1="10" y1="20" x2="30" y2="20"/></svg>'
 };
 
+// Tests with default options
 QUnit.test("Read then write SVG string", function(assert) {
 	var obj, str, test;
 	for (test in readWriteTests) {
@@ -167,10 +167,6 @@ QUnit.test("Read then write SVG string", function(assert) {
 		obj = new SVG_Root(str);
 		assert.equal(obj.write(), str, test);
 	}
-
-	obj = new SVG_Root(readWriteTests['Test indentation']);
-	obj.options.whitespace = 'pretty';
-	assert.equal(obj.write(), '<svg>\n  <circle cx="20" cy="20" r="10"/>\n  <line x1="10" y1="20" x2="30" y2="20"/>\n</svg>', 'Indentation test 2');
 });
 
 // Read an SVG string, create a DOM element from it, then read that and write it as a string
@@ -182,6 +178,35 @@ QUnit.test("Test createSVGObject", function(assert) {
 		var obj3 = new SVG_Root(obj2);
 		assert.equal(obj3.write(), str, test);
 	}
+});
+
+QUnit.test("Test optimisations options", function(assert) {
+	var tests = {
+		'Pretty indendation': {
+			input: '<svg><circle cx="20" cy="20" r="10"/><line x1="10" y1="20" x2="30" y2="20"/></svg>',
+			options: { whitespace: 'pretty' },
+			output: '<svg>\n  <circle cx="20" cy="20" r="10"/>\n  <line x1="10" y1="20" x2="30" y2="20"/>\n</svg>'
+		},
+		'Remove empty elements': {
+			input: '<rect/>',
+			options: { removeRedundantShapes: true },
+			output: ''
+		},
+		'Include empty elements': {
+			input: '<rect/>',
+			options: { removeRedundantShapes: false },
+			output: '<rect/>'
+		}
+	};
+
+	for (var test in tests) {
+		var data = tests[test];
+		obj = new SVG_Root(data.input);
+		$.extend(obj.options, data.options);
+		obj.optimise();
+		assert.equal(obj.write(), data.output, test);
+	}
+
 });
 
 QUnit.test("Translate shapes", function(assert) {
