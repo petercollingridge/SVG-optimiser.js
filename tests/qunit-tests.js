@@ -157,7 +157,7 @@ var readWriteTests = {
 	"Don't remove empty element": '<rect/>',
 	"Don't optimise attributes": '<rect x="0" y="10.00" width=" 50 " height="100.0"/>',
 	multipath: '<path d="M10 40A42 24 0 1 1 90 40C80 50 70 30 60 40S50 50 40 40 20 50 10 40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80L55 80 55 90 70 90z"/>',
-	'Test indentation': '<svg><circle cx="20" cy="20" r="100"/></svg>'
+	'Test indentation': '<svg><circle cx="20" cy="20" r="10"/><line x1="10" y1="20" x2="30" y2="20"/></svg>'
 };
 
 QUnit.test("Read then write SVG string", function(assert) {
@@ -170,7 +170,7 @@ QUnit.test("Read then write SVG string", function(assert) {
 
 	obj = new SVG_Root(readWriteTests['Test indentation']);
 	obj.options.whitespace = 'pretty';
-	assert.equal(obj.write(), '<svg>\n  <circle cx="20" cy="20" r="100"/>\n</svg>', 'Indentation test 2');
+	assert.equal(obj.write(), '<svg>\n  <circle cx="20" cy="20" r="10"/>\n  <line x1="10" y1="20" x2="30" y2="20"/>\n</svg>', 'Indentation test 2');
 });
 
 // Read an SVG string, create a DOM element from it, then read that and write it as a string
