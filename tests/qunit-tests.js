@@ -191,12 +191,17 @@ QUnit.test("Test optimisations options", function(assert) {
 			input: '<rect/>',
 			options: { removeRedundantShapes: true },
 			output: ''
-		},
+		},/*
 		'Include empty elements': {
 			input: '<rect/>',
 			options: { removeRedundantShapes: false },
 			output: '<rect/>'
-		}
+		},*/
+		'Remove empty group': {
+			input: '<svg><g><circle cx="20" cy="20" r="10"/><line x1="10" y1="20" x2="30" y2="20"/></g></svg>',
+			options: { removeCleanGroups: true },
+			output: '<svg><circle cx="20" cy="20" r="10"/><line x1="10" y1="20" x2="30" y2="20"/></svg>'
+		},
 	};
 
 	for (var test in tests) {

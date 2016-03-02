@@ -76,11 +76,15 @@ SVG_Element.prototype.write = function(options, depth) {
         str += ' ' + attr + '="' + this.attributes[attr] + '"';
     }
 
+    if (!this.toSkip) { depth++; }
+
     // Add child information
     var childString = "";
     for (var i = 0; i < this.children.length; i++) {
-        childString += this.children[i].write(options, depth + 1);
+        childString += this.children[i].write(options, depth);
     }
+
+    if (this.toSkip) { return childString; }
 
     if (this.text.length + childString.length > 0) {
         str += ">" + options.newLine;
@@ -93,6 +97,7 @@ SVG_Element.prototype.write = function(options, depth) {
     return str;
 };
 
+// TODO: get this work with skipped elements
 SVG_Element.prototype.createSVGObject = function() {
     var element = document.createElementNS(this.namespaceURI, this.tag);
 
@@ -115,6 +120,11 @@ SVG_Element.prototype.createSVGObject = function() {
 SVG_Element.prototype.optimise = function(options) {
     // Get set copy of attributes to optimise
     this.getOriginalAttributes();
+
+    this.attributeCounts = 0;
+    for (var attr in this.attributes) {
+        this.attributeCounts++;
+    }
 
     this.elementSpecificOptimisations(options);
 
@@ -196,6 +206,7 @@ SVG_Path_Element.prototype.scale = function(coordinates, parameters) {
     return SVG_optimise.transformPath.scale(coordinates, parameters);
 };
 
+
 // Rect element
 // https://www.w3.org/TR/SVG/shapes.html#RectElement
 var SVG_Rect_Element = function(element) {
@@ -216,14 +227,30 @@ SVG_Rect_Element.prototype.translate = function(coordinates, parameters) {
     return coordinates;
 };
 
+
+var SVG_Group_Element = function(element) {
+    SVG_Element.call(this, element);
+};
+SVG_Group_Element.prototype = Object.create(SVG_Element.prototype);
+
+SVG_Group_Element.prototype.elementSpecificOptimisations = function(options) {
+    if (options.removeCleanGroups && !this.attributeCounts) {
+        this.toSkip = true;
+    }
+};
+
+
 // Create the child element of an given element with the correct Objects
 SVG_Element.prototype.getChild = function(child) {
-    if (child.nodeName === 'path') {
-        return new SVG_Path_Element(child);
-    } else if (child.nodeName === 'rect') {
-        return new SVG_Rect_Element(child);
-    } else {
-        return new SVG_Element(child);
+    switch (child.nodeName) {
+        case 'path':
+            return new SVG_Path_Element(child);
+        case 'rect':
+            return new SVG_Rect_Element(child);
+        case 'g':
+            return new SVG_Group_Element(child);
+        default:
+            return new SVG_Element(child);
     }
 };
 
@@ -242,7 +269,8 @@ var SVG_Root = function(svgString) {
     this.options = {
         whitespace: 'remove',
         positionDecimals: SVG_optimise.getRoundingFunction('decimal places', 1),
-        removeRedundantShapes: true
+        removeRedundantShapes: true,
+        removeCleanGroups: true,
     };
 };
 
