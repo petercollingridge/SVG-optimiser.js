@@ -120,6 +120,7 @@ QUnit.test("transformShape.translate", function(assert) {
 	assert.deepEqual(transformFunction('circle', { x: 10, cy: 20, r: 10 }, [-2.2, 0.5]), { cx: -2.2, cy: 20.5 }, 'Translate circle with cx replaced by x');
 	assert.deepEqual(transformFunction('ellipse', { cx: 10, cy: 20, rx: 10, ry: 12 }, [-2.2, 0.5]), { cx: 7.8, cy: 20.5 }, 'Translate ellipse in 2D');
 	assert.deepEqual(transformFunction('line', { x1: 10, y1: 20, x2: 110.5, y2: -120 }, [-2.2, 0.5]), { x1: 7.8, y1: 20.5, x2: 108.3, y2: -119.5 }, 'Translate line in 2D');
+	assert.deepEqual(transformFunction('polyline', { points: [30, 70, 40, 80, 60, 80, 70, 70] }, [-2.2, 0.5]), { points: [27.8, 70.5, 37.8, 80.5, 57.8, 80.5, 67.8, 70.5] }, 'Translate polyline in 2D');
 });
 
 QUnit.test("transformPath.translate", function(assert) {
@@ -156,7 +157,8 @@ var readWriteTests = {
 	"Don't remove empty element": '<rect/>',
 	"Don't optimise attributes": '<rect x="0" y="10.00" width=" 50 " height="100.0"/>',
 	multipath: '<path d="M10 40A42 24 0 1 1 90 40C80 50 70 30 60 40S50 50 40 40 20 50 10 40M86 50Q74 40 62 50T38 50 14 50L30 90H45V80L55 80 55 90 70 90z"/>',
-	'Test indentation': '<svg><circle cx="20" cy="20" r="10"/><line x1="10" y1="20" x2="30" y2="20"/></svg>'
+	'Test indentation': '<svg><circle cx="20" cy="20" r="10"/><line x1="10" y1="20" x2="30" y2="20"/></svg>',
+	'Non-path elements': '<svg><rect x="20" y="4" width="60" height="10"/><circle cx="36" cy="36.5" r="10"/><ellipse cx="64" cy="36.5" rx="10" ry="15"/><line x1="48" y1="50" x2="55" y2="65"/><polygon points="20,14 5,50, 30,90, 70,90, 95,50, 80,14"/><polyline points="30,70 40,80 60,80 70,70"/></svg>'
 };
 
 // Tests with default options

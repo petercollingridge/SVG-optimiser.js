@@ -97,7 +97,7 @@ var SVG_optimise = {
             if (transformName === 'skewx') transformName = 'skewX';
             if (transformName === 'skewy') transformName = 'skewY';
 
-            digits = transform[2].split(/\s*[,\s]+\s*/);
+            digits = transform[2].split(/\s*[,\s]+/);
             transform = [transformName];
 
             for (var i = 0; i < digits.length; i++) {

@@ -207,6 +207,22 @@ SVG_Path_Element.prototype.scale = function(coordinates, parameters) {
 };
 
 
+var SVG_Polyline_Element = function(element) {
+    SVG_Element.call(this, element);
+
+    // Convert path d attribute to array of arrays
+    if (this.attributes.points) {
+        this.points = this.attributes.points.split(/\s*[,\s]+/).map(parseFloat);
+    }
+};
+SVG_Polyline_Element.prototype = Object.create(SVG_Element.prototype);
+
+SVG_Polyline_Element.prototype.elementSpecificOptimisations = function(options) {
+    if (this.transform) {
+        this.applyTransformation(this.points, options);
+    }
+};
+
 // Rect element
 // https://www.w3.org/TR/SVG/shapes.html#RectElement
 var SVG_Rect_Element = function(element) {
@@ -245,6 +261,8 @@ SVG_Element.prototype.getChild = function(child) {
     switch (child.nodeName) {
         case 'path':
             return new SVG_Path_Element(child);
+        case 'polyline':
+            return new SVG_Polyline_Element(child);
         case 'rect':
             return new SVG_Rect_Element(child);
         case 'g':
@@ -289,3 +307,4 @@ SVG_Root.prototype.createSVGObject = function() {
     return  this.elements.createSVGObject();
 };
 
+//var obj = new SVG_Root()
