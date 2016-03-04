@@ -170,10 +170,9 @@ var SVG_optimise = {
             } else if (tag === 'polyline' || tag === 'polygon') {
                 var points = attributes.points || [];
                 newAttributes.points = [];
-                for (var i = 0; i < points.length; i++) {
+                for (var i = 0; i < points.length; i += 2) {
                     newAttributes.points[i] = (points[i] || 0) + dx;
-                    i++;
-                    newAttributes.points[i] = (points[i] || 0) + dy;
+                    newAttributes.points[i + 1] = (points[i + 1] || 0) + dy;
                 }
             } else {
                 console.warn("Element " + tag + " could not be translated");

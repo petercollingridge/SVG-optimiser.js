@@ -218,8 +218,10 @@ QUnit.test("Test optimisations options", function(assert) {
 
 QUnit.test("Translate shapes", function(assert) {
 	var tests = [
-		['Basic rect translate 1D', '<rect transform="translate(-2.2)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12" width="24" height="16"/>'],
-		['Basic rect translate 2D', '<rect transform="translate(-2.2, 0.5)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12.5" width="24" height="16"/>']
+		['Rect translate 1D', '<rect transform="translate(-2.2)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12" width="24" height="16"/>'],
+		['Rect translate 2D', '<rect transform="translate(-2.2, 0.5)" x="10" y="12" width="24" height="16"/>', '<rect x="7.8" y="12.5" width="24" height="16"/>'],
+		['Polyline translate 2D', '<polyline transform="translate(-2.2, 0.5)" points="30,70 40,80 60,80 70,70"/>', '<polyline points="27.8 70.5 37.8 80.5 57.8 80.5 67.8 70.5"/>'],
+		//['Circle translate 2D', '<circle transform="translate(-2.2, 0.5)" cx="10" cy="12" r="16"/>', '<circle cx="7.8" cy="12.5" r="16"/>']
 	];
 
 	for (var i = 0; i < tests.length; i++) {

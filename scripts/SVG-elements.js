@@ -219,9 +219,34 @@ SVG_Polyline_Element.prototype = Object.create(SVG_Element.prototype);
 
 SVG_Polyline_Element.prototype.elementSpecificOptimisations = function(options) {
     if (this.transform) {
-        this.applyTransformation(this.points, options);
+        var coordinates = this.applyTransformation(this.points, options);
+        // TODO: Maybe move this to optimise-functions
+
+        var pathString = "";
+        for (var i = 0; i < coordinates.length; i++) {
+            var n = coordinates[i];
+            var d = options.positionDecimals(n);
+            // Add a space if this is no the first digit and if the digit positive
+            pathString += (i > 0 && (n > 0 || d == '0')) ? " " + d : d;
+        }
+        this.attributes.points = pathString;
     }
 };
+
+// TODO: Add this back to optimise-functions
+SVG_Polyline_Element.prototype.translate = function(coordinates, parameters) {
+    var points = coordinates || [];
+    var newPoints = [];
+    var dx = parameters[0] || 0;
+    var dy = parameters[1] || 0;
+
+    for (var i = 0; i < points.length; i += 2) {
+        newPoints[i] = (points[i] || 0) + dx;
+        newPoints[i + 1] = (points[i + 1] || 0) + dy;
+    }
+    return newPoints;
+};
+
 
 // Rect element
 // https://www.w3.org/TR/SVG/shapes.html#RectElement
