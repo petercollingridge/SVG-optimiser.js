@@ -148,7 +148,7 @@ SVG_Element.prototype.optimise = function(options) {
 // Overwritten by other object classes
 SVG_Element.prototype.elementSpecificOptimisations = function(options) {
     if (this.transform) {
-        this.applyTransformation(this.attributes, options);
+        this.attributes = this.applyTransformation(this.attributes, options);
     }
 };
 
@@ -159,16 +159,24 @@ SVG_Element.prototype.applyTransformation = function(coordinates, options) {
 
         // TODO: strip out meaningless transforms
         if (transformFunction) {
-            coordinates = transformFunction(coordinates, transform.slice(1));
+            coordinates = transformFunction.call(this, coordinates, transform.slice(1));
             // Remove transformation from the attribute hash
             // TOOD: Check there are no other transformations in the attribute
-            delete this.attributes.transform;
+            delete coordinates.transform;
+        } else {
+            console.warn("No transform function " + transform + " for " + this.tag);
         }
     }
 
     return coordinates;
 };
 
+SVG_Element.prototype.translate = function(coordinates, parameters) {
+    var attributes = SVG_optimise.transformShape.translate(this.tag, coordinates, parameters);
+    // TODO: Move this to the translate function when we decide how to update attributes
+    $.extend(coordinates, attributes);
+    return coordinates;
+};
 
 // Path element
 // https://www.w3.org/TR/SVG/paths.html
@@ -217,10 +225,14 @@ var SVG_Polyline_Element = function(element) {
 };
 SVG_Polyline_Element.prototype = Object.create(SVG_Element.prototype);
 
+
 SVG_Polyline_Element.prototype.elementSpecificOptimisations = function(options) {
     if (this.transform) {
-        var coordinates = this.applyTransformation(this.points, options);
+        this.attributes.points = this.points;
+        this.attributes = this.applyTransformation(this.attributes, options);
+        
         // TODO: Maybe move this to optimise-functions
+        var coordinates = this.attributes.points;
 
         var pathString = "";
         for (var i = 0; i < coordinates.length; i++) {
@@ -233,26 +245,12 @@ SVG_Polyline_Element.prototype.elementSpecificOptimisations = function(options) 
     }
 };
 
-// TODO: Add this back to optimise-functions
-SVG_Polyline_Element.prototype.translate = function(coordinates, parameters) {
-    var points = coordinates || [];
-    var newPoints = [];
-    var dx = parameters[0] || 0;
-    var dy = parameters[1] || 0;
-
-    for (var i = 0; i < points.length; i += 2) {
-        newPoints[i] = (points[i] || 0) + dx;
-        newPoints[i + 1] = (points[i + 1] || 0) + dy;
-    }
-    return newPoints;
-};
-
-
 // Rect element
 // https://www.w3.org/TR/SVG/shapes.html#RectElement
 var SVG_Rect_Element = function(element) {
     SVG_Element.call(this, element);
 
+    // TODO: moves this to an array of position variables
     this.originalAttributes.x = parseFloat(this.originalAttributes.x || 0);
     this.originalAttributes.y = parseFloat(this.originalAttributes.y || 0);
     this.originalAttributes.width = parseFloat(this.originalAttributes.width || 0);
@@ -261,12 +259,17 @@ var SVG_Rect_Element = function(element) {
 };
 SVG_Rect_Element.prototype = Object.create(SVG_Element.prototype);
 
-SVG_Rect_Element.prototype.translate = function(coordinates, parameters) {
-    var attributes = SVG_optimise.transformShape.translate('rect', coordinates, parameters);
-    // TODO: Move this the the translate function when we decide how to update attributes
-    $.extend(coordinates, attributes);
-    return coordinates;
+
+var SVG_Circle_Element = function(element) {
+    SVG_Element.call(this, element);
+
+    this.originalAttributes.cx = parseFloat(this.originalAttributes.cx || 0);
+    this.originalAttributes.cy = parseFloat(this.originalAttributes.cy || 0);
+    this.originalAttributes.r = parseFloat(this.originalAttributes.r || 0);
+
 };
+SVG_Circle_Element.prototype = Object.create(SVG_Element.prototype);
+
 
 
 var SVG_Group_Element = function(element) {
@@ -290,6 +293,8 @@ SVG_Element.prototype.getChild = function(child) {
             return new SVG_Polyline_Element(child);
         case 'rect':
             return new SVG_Rect_Element(child);
+        case 'circle':
+            return new SVG_Circle_Element(child);
         case 'g':
             return new SVG_Group_Element(child);
         default:
