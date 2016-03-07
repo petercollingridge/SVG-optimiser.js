@@ -50,13 +50,13 @@ var SVG_optimise = {
 
         // Converts a string of digits to an array of floats
         var getDigits = function(digitString) {
+            var digit, digits = [];
             if (digitString) {
-                var digit, digits = [];
                 while (digit = reDigits.exec(digitString)) {
                     digits.push(parseFloat(digit));
                 }
-                return digits;
             }
+            return digits;
         };
 
         while (commands = reCommands.exec(dAttr)) {
