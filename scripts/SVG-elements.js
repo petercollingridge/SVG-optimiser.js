@@ -8,6 +8,7 @@ var SVG_Element = function(element) {
     this.tag = element.nodeName;
     this.attributes = {};
     this.originalAttributes = {};
+    this.essentialAttributes = [];
     this.styles = {};
     this.children = [];
     this.text = "";
@@ -16,15 +17,30 @@ var SVG_Element = function(element) {
     this.namespaceURI = 'http://www.w3.org/2000/svg';
 
     // Add attributes to two hashs, one for the original and one for optimising
-    var i, attributes = element.attributes || [];
+    var i,
+        attr,
+        attrName,
+        attributes = element.attributes || [];
+
     for (i = 0; i < attributes.length; i++){
-        var attr = attributes.item(i);
-        var attrName = attr.nodeName;
+        attr = attributes.item(i);
+        attrName = attr.nodeName;
         this.originalAttributes[attrName] = attr.value;
         this.attributes[attrName] = attr.value;
     }
 
-    // Parse attributes
+    // Convert position attributes to numbers and add default values 
+    var attributeData = shapeAttributes[this.tag];
+    if (attributeData) {
+        var digitAttributes = attributeData.parseAsDigit || [];
+        for (i = 0; i < digitAttributes.length; i++) {
+            attrName = digitAttributes[i];
+            this.originalAttributes[attrName] = parseFloat(this.originalAttributes[attrName] || 0);
+        }
+        this.essentialAttributes = attributeData.essential || [];
+    }
+
+    // Parse transform
     if (this.attributes.transform) {
         this.addTransform(this.attributes.transform);
     }
@@ -129,10 +145,9 @@ SVG_Element.prototype.optimise = function(options) {
     this.elementSpecificOptimisations(options);
 
     // If an shape element lacks some dimension then don't draw it
-    var essentialAttributes = SVG_optimise.essentialAttributes[this.tag];
-    if (options.removeRedundantShapes && essentialAttributes) {
-        for (var i = 0; i < essentialAttributes.length; i++) {
-            if (!this.attributes[essentialAttributes[i]]) {
+    if (options.removeRedundantShapes && this.essentialAttributes) {
+        for (var i = 0; i < this.essentialAttributes.length; i++) {
+            if (!this.attributes[this.essentialAttributes[i]]) {
                 this.toRemove = true;
                 // If we remove the element, then remove its children
                 return;
@@ -245,33 +260,6 @@ SVG_Polyline_Element.prototype.elementSpecificOptimisations = function(options) 
     }
 };
 
-// Rect element
-// https://www.w3.org/TR/SVG/shapes.html#RectElement
-var SVG_Rect_Element = function(element) {
-    SVG_Element.call(this, element);
-
-    // TODO: moves this to an array of position variables
-    this.originalAttributes.x = parseFloat(this.originalAttributes.x || 0);
-    this.originalAttributes.y = parseFloat(this.originalAttributes.y || 0);
-    this.originalAttributes.width = parseFloat(this.originalAttributes.width || 0);
-    this.originalAttributes.height = parseFloat(this.originalAttributes.height || 0);
-
-};
-SVG_Rect_Element.prototype = Object.create(SVG_Element.prototype);
-
-
-var SVG_Circle_Element = function(element) {
-    SVG_Element.call(this, element);
-
-    this.originalAttributes.cx = parseFloat(this.originalAttributes.cx || 0);
-    this.originalAttributes.cy = parseFloat(this.originalAttributes.cy || 0);
-    this.originalAttributes.r = parseFloat(this.originalAttributes.r || 0);
-
-};
-SVG_Circle_Element.prototype = Object.create(SVG_Element.prototype);
-
-
-
 var SVG_Group_Element = function(element) {
     SVG_Element.call(this, element);
 };
@@ -291,10 +279,6 @@ SVG_Element.prototype.getChild = function(child) {
             return new SVG_Path_Element(child);
         case 'polyline':
             return new SVG_Polyline_Element(child);
-        case 'rect':
-            return new SVG_Rect_Element(child);
-        case 'circle':
-            return new SVG_Circle_Element(child);
         case 'g':
             return new SVG_Group_Element(child);
         default:

@@ -1,14 +1,14 @@
-var SVG_optimise = {
-    // Map element type to attribute that is required in order to show up
-    essentialAttributes: {
-        'path': ['d'],
-        'polygon': ['points'],
-        'polyline': ['points'],
-        'rect': ['width', 'height'],
-        'circle': ['r'],
-        'ellipse': ['r'],
-    },
+var shapeAttributes = {
+    'path': { essential: ['d'] },
+    'polygon': { essential: ['points'] },
+    'polyline': {  essential: ['points'] },
+    'rect': { parseAsDigit: ['x', 'y', 'width', 'height'], essential: ['width', 'height'] },
+    'circle': { parseAsDigit: ['cx', 'cy', 'r'], essential: ['r'] },
+    'ellipse': { parseAsDigit: ['cx', 'cy', 'rx', 'ry'], essential: ['r', 'ry'] },
+    'line': { parseAsDigit: ['x1', 'y1', 'x2', 'y2'] },
+};
 
+var SVG_optimise = {
     svgToJQueryObject: function(svgString) {
         // Replace any leading whitespace which will mess up XML parsing
         svgString =  svgString.replace(/^[\s\n]*/, "");
