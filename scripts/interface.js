@@ -1,5 +1,5 @@
 // http://stackoverflow.com/questions/6507293/convert-xml-to-string-with-jquery
-function xmlToString(xmlData) { 
+function xmlToString(xmlData) {
     var xmlString;
     if (window.ActiveXObject){
         // IE
@@ -23,7 +23,7 @@ function stringToXML(svgString) {
     try {
         svgDoc = $.parseXML(svgString);
     } catch (err) {
-        alert("Unable to parse SVG")
+        alert("Unable to parse SVG");
     }
 
     return svgDoc;
@@ -45,7 +45,7 @@ function getFileSize(str) {
     } else {
         return (Math.round(size * 10) / 10) + " kB";
     }
-};
+}
 
 // Clear element with given selector and add contents
 function addContentsToDiv(contents, selector) {
@@ -55,7 +55,7 @@ function addContentsToDiv(contents, selector) {
         div.empty();
         div.append(contents);
     }
-};
+}
 
 function addSVGStats(selector, filesize, numElements) {
     var div = $(selector);
@@ -66,7 +66,7 @@ function addSVGStats(selector, filesize, numElements) {
         ul.append($('<li>Filesize: ' + filesize + '</li>'));
         ul.append($('<li>Elements: ' + numElements + '</li>'));
     }
-};
+}
 
 function optimiseSVG(svgObj) {
     // Create the new SVG string
@@ -81,27 +81,29 @@ function optimiseSVG(svgObj) {
 
     // Show code of updated SVG
     $('#output-container').text(svgStringNew);
-};
+}
 
 function addOptions(svgObj) {
     var container = $('#options-container');
     container.empty();
 
+    var selectOption = function() {
+        svgObj.options[this.name] = !this.checked;
+        optimiseSVG(svgObj);
+    };
+
     for (var option in svgObj.options) {
         var checkbox = $('<input type="checkbox" name="' + option + '"/>' + option +'<br/>');
 
-        checkbox.change(function(evt) {
-            svgObj.options[this.name] = !this.checked;
-            optimiseSVG(svgObj);
-        });
+        checkbox.change(selectOption);
         container.append(checkbox);
     }
-};
+}
 
 // Get SVG string from textarea with given id
 // Parse as XML and convert to jQuery object
 function loadSVG(id) {
-    var svgStringOld = $('#input-svg').val()
+    var svgStringOld = $('#input-svg').val();
     var svgDoc = stringToXML(svgStringOld);
 
     if (!svgDoc) { return; }
@@ -121,14 +123,14 @@ function loadSVG(id) {
     addSVGStats('#svg-before .svg-data', getFileSize(svgStringOld), jQuerySVG.find("*").length);
 
     // Add new SVG image
-    optimiseSVG(svgObj)
+    optimiseSVG(svgObj);
 
     // Update interface
     $('#upload-container').hide("fast");
     addOptions(svgObj);
     $('#output-section').show();
     $('#optimise-section').show();
-};
+}
 
 $(document).ready(function() {
     $('#upload-section > h2').click(function() {
