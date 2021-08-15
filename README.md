@@ -1,6 +1,8 @@
 # `SVG-optimiser.js`
 > An online SVG optimiser using JavaScript and jQuery
 
+Use it now: https://mountainash.github.io/SVG-optimiser.js/
+
 ## Using `optimise-functions.js` and `SVG-elements.js`
 
 ### Create an `SVG_Root` object
