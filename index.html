@@ -1,16 +1,43 @@
 <!DOCTYPE HTML>
 <html lang="en">
-
 <head>
-    <title>SVG optimisation</title>
-    <link rel='stylesheet' type='text/css' href='test.css'/>
-    <script type="text/javascript" src="lib/jquery-1.11.1.min.js"></script>
-    <script type="text/javascript" src="scripts/SVG-data.js"></script>
-    <script type="text/javascript" src="scripts/optimiseSVG.js"></script>
-    <script type="text/javascript" src="scripts/optimise-functions.js"></script>
-    <script type="text/javascript" src="scripts/interface.js"></script>
-</head>
+    <title>SVG Optimisation</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js" integrity="sha512-894YE6QWD5I59HgZOGReFYm4dnWc1Qt5NtvYSaNcOP+u1T9qYdvdihz0PPSiiqn/+/3e7Jo4EaG7TubfWGUrMQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="scripts/SVG-data.js"></script>
+    <script src="scripts/optimiseSVG.js"></script>
+    <script src="scripts/optimise-functions.js"></script>
+    <script src="scripts/interface.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
 
+        textarea {
+            margin-top: 1em;
+            width: 100%;
+            height: 200px;
+        }
+
+        #optimise-container > div {
+            display: inline-block;
+            background: #e8e8e8;
+            margin: 5px;
+            padding: 5px;
+        }
+
+        #options-container {
+            -webkit-columns: 300px 3;
+            -moz-columns: 300px 3;
+            columns: 300px 3;
+        }
+
+        #output-container {
+            white-space: pre-wrap;
+            font-family: Fixed, 'Courier New', monospace;
+            font-size: 12px;
+        }
+    </style>
+</head>
 <body>
     <h1>SVG optimiser</h1>
 
@@ -18,11 +45,13 @@
         <h2>Upload</h2>
         <div id="upload-container">
             <div>
+                <!-- Missing from git
                 <button onclick="getExampleSVG('mad-scientist')">Example: Scientist</button>
                 <button onclick="getExampleSVG('FClef')">Example: Clef</button>
                 <button onclick="getExampleSVG('eleven_below')">Example: Room</button>
                 <button onclick="getExampleSVG('Awesome_tiger')">Example: Tiger</button>
                 <button onclick="getExampleSVG('Example')">Example: Another example</button>
+                -->
                 <button onclick="loadSVG('svg-input')">Upload</button>
             </div>
             <textarea id="input-svg" placeholder="Paste SVG code here, then click upload"></textarea>
@@ -53,7 +82,7 @@
 
     <section id="output-section">
         <h2>Output</h2>
-        <div id="output-container"></div>
+        <textarea id="output-container"></textarea>
     </section>
 </body>
 </html>

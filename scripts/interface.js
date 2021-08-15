@@ -126,17 +126,15 @@ function loadSVG(id) {
     optimiseSVG(svgObj);
 
     // Update interface
-    $('#upload-container').hide("fast");
+    $('#upload-section').hide('fast');
     addOptions(svgObj);
-    $('#output-section').show();
-    $('#optimise-section').show();
+    $('#output-section,#optimise-section').show();
 }
 
-$(document).ready(function() {
+$(function() {
     $('#upload-section > h2').click(function() {
         $('#upload-container').toggle('fast');
     });
 
-    $('#output-section').hide();
-    $('#optimise-section').hide();
+    $('#output-section,#optimise-section').hide();
 });
